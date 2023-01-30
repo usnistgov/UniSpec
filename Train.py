@@ -5,7 +5,6 @@ Created on Wed Jul  6 13:15:26 2022
 @author: jsl6
 """
 ROOT_INT = 2
-DOWNWEIGHT_P = False
 EMBED = False
 
 import numpy as np
@@ -26,7 +25,6 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 from utils import DicObj
 criteria = open("input_data/ion_stats/criteria.txt","r").read().split("\n")
 D = DicObj(criteria=criteria)
-pfilter = D.create_filter('"p" in ion')
 
 ###############################################################################
 ################################ Dataset ######################################
@@ -100,39 +98,21 @@ opt = torch.optim.Adam(model.parameters(), 3e-4)
 ###############################################################################
 
 CS = torch.nn.CosineSimilarity(dim=-1)
-def LossFunc(targ, pred, pwt=0.5, root=ROOT_INT):
+def LossFunc(targ, pred, root=ROOT_INT):
     targ = L.root_intensity(targ, root=root) if root!=False else targ
     pred = L.root_intensity(pred, root=root) if root!=False else pred
-    # targ[:,pfilter] = pwt*targ[:,pfilter]
-    # pred[:,pfilter] = pwt*pred[:,pfilter]
     cs = CS(targ, pred)
     return -cs
-
-def AdvAtt(samples, targ):
-    model.train()
-    model.zero_grad()
-    samplesgpu = samples.to(device)
-    samplesgpu.requires_grad = True
-    targgpu = targ.to(device)
-    model.to(device)
-    out,_,_ = model(samplesgpu)
-    loss,(cs,mae) = LossFunc(targgpu, out);loss = loss.mean()
-    loss.backward()
-    grads = samplesgpu.grad
-    samplesgpu2 = samplesgpu + 10*grads
-    return samplesgpu2, targgpu
 
 ###############################################################################
 ########################## Training and testing ###############################
 ###############################################################################
 
-def train_step(samples, targ, attack=False):
-    if attack:
-        samplesgpu, targgpu = AdvAtt(samples, targ)
-    else:
-        samplesgpu = [m.to(device) for m in samples]
-        targgpu = targ.to(device)
-        model.to(device)
+def train_step(samples, targ):
+    
+    samplesgpu = [m.to(device) for m in samples]
+    targgpu = targ.to(device)
+    model.to(device)
     
     model.train()
     model.zero_grad()

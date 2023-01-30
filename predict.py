@@ -31,5 +31,13 @@ model1.load_state_dict(
 mlist = [model1]
 E = EvalObj(mlist, D, enable_gpu=True)
 
-labels = open("C:/Users/jsl6/Documents/Paper3/library_labels/large_library/labels_24.txt").read().split("\n")
-comments = open("C:/Users/jsl6/Documents/Paper3/library_labels/large_library/msp_comments_24.txt").read().split("\n")
+labels = open("C:/Users/jsl6/Documents/Paper3/library_labels/large_library/labels_33.txt").read().split("\n")
+comments = open("C:/Users/jsl6/Documents/Paper3/library_labels/large_library/msp_comments_33.txt").read().split("\n")
+
+# import os
+# files = os.listdir("./temp/")
+# for i in range(10):
+#     l  = len(files)//10 + 1
+#     with open("C:/Users/jsl6/Documents/Python Scripts/Pytorch/SpecPred/prosit/AIData7/predictions/prositplus/insilico_library/islib_24_%d.msp"%i, "w") as f:
+#         for file in files[i*l:(i+1)*l]:
+#             f.write(open("./temp/"+file,'r').read())
