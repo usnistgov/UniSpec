@@ -8,14 +8,14 @@ import re
 import numpy as np
 import torch
 import matplotlib.pyplot as plt
-path = 'C:/Users/jsl6/Documents/Python Scripts/Pytorch/SpecPred/prosit/AIData7/'
-rawdatapath = 'C:/Users/jsl6/MyDatasets/MassSpec/AIData/'
+path = 'C:/Users/jsl6/Documents/Python Scripts/Pytorch/SpecPred/prosit/AIData8/'
+rawdatapath = 'C:/Users/jsl6/MyDatasets/MassSpec/'
 
 class DicObj:
     def __init__(self,
                  seq_len = 40,
                  chlim = [1,8],
-                 criteria=['occurs>0']
+                 criteria=['occurs>0'],
                  ):
         self.seq_len = seq_len
         self.chlim = chlim
@@ -23,26 +23,34 @@ class DicObj:
         self.dic = {b:a for a,b in enumerate('ARNDCQEGHILKMFPSTWYVX')}
         self.revdic = {b:a for a,b in self.dic.items()}
         self.mdic = {b:a+len(self.dic) for a,b in enumerate([
-            '','Acetyl', 'Carbamidomethyl', 'Gln->pyro-Glu', 
+            '','Acetyl', 'Carbamidomethyl', 'Gln->pyro-Glu', 'TMT6plex',
             'Glu->pyro-Glu', 'Oxidation', 'Phospho', 'Pyro-carbamidomethyl'])
         }
         self.revmdic = {b:a for a,b in self.mdic.items()}
         
         # proteomicsresource.washington.edu/protocols06/masses.php
         # www.unimod.org/login.php?a=logout
-        self.mass = { 
+        self.mass = {
+            # Amino acids
             'A': 71.037113805,'R':156.101111050,'N':114.042927470,'D':115.026943065,
             'C':103.009184505,'Q':128.058577540,'E':129.042593135,'G': 57.021463735,
             'H':137.058911875,'I':113.084064015,'L':113.084064015,'K':128.094963050,
             'M':131.040484645,'F':147.068413945,'P': 97.052763875,'S': 87.032028435,
             'T':101.047678505,'W':186.079312980,'Y':163.063328575,'V': 99.068413945,
+            # Neutral losses
             'NH2':16.0187,'NH3':17.0265+4.9e-5,'H2O':18.010565,'CO':27.994915,
             'C2H5NOS':91.009184,'CH2SH':46.9955+0.0458,'CH3SOH':63.99828544,
             'HPO3':79.966335,'H3PO4':97.9769,'H5PO5':115.987465,'H7PO6':133.99803,
+            'TMT':229.17,'RP126':154.1221,'RP127N':155.1192,'RP127C':155.1254,
+            'RP128N':156.1225,'RP128C':156.1287,'RP129N':157.1258,'RP129C':157.1322,
+            'RP130N':158.1291,'RP130C':158.1356,'RP131':159.1325,
+            # Modifications
             'Acetyl':42.010565,'Carbamidomethyl':57.021464,'Oxidation':15.994915,
             'Gln->pyro-Glu':-17.026549, 'Glu->pyro-Glu':-18.010565,'Phospho':79.966331,
-            'Pyro-carbamidomethyl':39.994915,'CAM':57.021464, # EDIT 230114
+            'Pyro-carbamidomethyl':39.994915,'CAM':57.021464,'TMT6plex':231.17747,
+            # Isotopes
             'i':1.00727646688,'iso1':1.003,'iso2':1.002,
+            # Ions, immoniums, et al.
             'a':-26.9871,'b':1.007276, 'p':20.02656, 'y':19.0184,
             'ICA':76.021545, 'IDA':88.039304, 'IDB':70.028793, 'IEA':102.054954,
             'IFA':120.080775,'IFB':91.054226, 'IHA':110.071273,'IHB':82.05255,
@@ -60,6 +68,9 @@ class DicObj:
             'IWE':132.080776,'IWF':170.06004, 'IWH':142.065126,'IYA':136.07569,
             'IYB':91.054227, 'IYC':107.049141,
             'ICCAM':133.04301,
+            'TMTpH':230.17,'TMT126':126.1277,'TMT127N':127.1248,'TMT127C':127.1311,
+            'TMT128N':128.1281,'TMT128C':128.1344,'TMT129N':129.1315,
+            'TMT129C':129.1378,'TMT130N':130.1348,'TMT130C':130.1411,'TMT131':131.1382
         }
         
         self.dictionary = {}
@@ -68,9 +79,11 @@ class DicObj:
         self.seq_channels = len(self.dic) + len(self.mdic)
         self.channels = len(self.dic) + len(self.mdic) + self.chrng + 1
         
-        # Synonym
-        self.mdic['CAM'] = self.mdic['Carbamidomethyl'] # EDIT 230114
-        self.revmdic[self.mdic['CAM']] = 'CAM' # EDIT 230114
+        # Synonyms
+        self.mdic['CAM'] = self.mdic['Carbamidomethyl']
+        self.mdic['TMT'] = self.mdic['TMT6plex']
+        self.revmdic[self.mdic['CAM']] = 'CAM'
+        self.revmdic[self.mdic['TMT']] = 'TMT'
         
     def make_dictionary(self, 
                         criteria=['occurs>0'], 
@@ -161,6 +174,10 @@ class DicObj:
                           ])
             return (sum([self.mass[aa] for aa in seq[start:start+extent]]) - nl
                     + iso*isomass + self.mass['i'] + modmass)
+        # if TMT, calculate here and return
+        if ion[:3]=='TMT':
+            ion = ion.split('+')[0] if iso!=0 else ion
+            return self.mass[ion] + iso*isomass
         
         # product charge
         hold = ion.split("^") # separate off the charge at the end, if at all
@@ -357,7 +374,9 @@ class LoadObj:
         info = []
         for m in range(len(strings)):
             [seq,other] = strings[m].split('/')
-            [charge,mod,ev,nce] = other.split('_')
+            osplit = other.split("_") #TODO
+            if len(osplit)==3: osplit+=['NCE0'] #TODO
+            [charge,mod,ev,nce] = osplit#other.split('_') #TODO
             charge = int(charge);ev = float(ev[:-2]);nce = float(nce[3:])
             info.append((seq,mod,charge,ev,nce))
             out = self.inptsr(info[-1])
@@ -434,6 +453,7 @@ class LoadObj:
 
         """
         hold = label.split('_')
+        if len(hold)<4: hold += ['NCE0'] #TODO
         if typ=='ev': hold[-2] = '%.1feV'%(float(hold[-2][:-2])+ceadd)
         elif typ=='nce': hold[-1] = 'NCE%.1f'%(float(hold[-1][3:])+ceadd)
         return "_".join(hold)
@@ -468,7 +488,8 @@ class LoadObj:
         for m in range(npks):
             line = fp.readline()
             # print(npks, count, line);count+=1
-            [mass,ab,ion] = line.split('\t')
+            spl = '\t' if '\t' in line else ' '
+            [mass,ab,ion] = line.split(spl)
             masses[m] = float(mass)
             Abs[m] = float(ab)
             ions.append(ion.strip()[1:-1].split(',')[0])
@@ -506,12 +527,17 @@ class LoadObj:
                         poss.append(pos)
                     else:
                         [seq,other] = line.split()[1].split('/')
-                        [charge,mods,ev,nce] = other.split('_')
+                        otherspl = other.split('_') #TODO
+                        if len(otherspl)<4: otherspl+=['NCE0'] #TODO
+                        [charge,mods,ev,nce] = otherspl #TODO
                         charge = int(charge)
                         ev=float(ev[:-2])
                         nce = float(nce[3:])
                         if eval(criteria):
                             poss.append(pos)
+                if line[:3]=='Num':
+                    nmpks = int(line.split()[-1])
+                    for _ in range(nmpks): _ = f.readline()
         return np.array(poss)
     
     def FPs_from_labels(self, query_labels, msp_filename):
@@ -595,21 +621,15 @@ class EvalObj(LoadObj):
         
         # Filenames of experimental msp files
         self.fnms = {
-            'valuniq':rawdatapath+'Validation/ValidUniq2022418_2023J1_edit.msp',
-            'valcom':rawdatapath+'Validation/ValidCom2022418_edit.msp',
-            'valsim':rawdatapath+'Validation/ValidSim2022418_edit.msp',
-            'test':rawdatapath+'Testing/TestUniq202277_2023J1_edit.msp',
+            'valuniq':rawdatapath+'AIData/Validation/ValidUniq2022418_2023J1_edit.msp',
+            'valcom':rawdatapath+'AIData/Validation/ValidCom2022418_edit.msp',
+            'valsim':rawdatapath+'AIData/Validation/ValidSim2022418_edit.msp',
+            'test':rawdatapath+'AIData/Testing/TestUniq202277_2023J1_edit.msp',
             'mab':'C:/Users/jsl6/Documents/Paper3/testsetcur/NISTmAb20190711_Libtest_20221021.msp',
-            'consbest':rawdatapath+'../Consensus/Training/HmConsBest20210524.msp',
-            'consgood':rawdatapath+'../Consensus/Training/HmConsGood20210525.msp',
-            'conssemi':rawdatapath+'../Consensus/Training/HmConsSemi20210525.msp',
-        }
-        # Filenames of predicted msp files
-        self.fnmspred = {
-            'valuniq': path+'predictions/prositplus/valuniq_prositplus.msp',
-            'consbest': path+'predictions/prositplus/consbest_prositplus.msp',
-            'consgood': path+'predictions/prositplus/consgood_prositplus.msp',
-            'conssemi': path+'predictions/prositplus/conssemi_prositplus.msp'
+            'consbest':rawdatapath+'Consensus/Training/HmConsBest20210524.msp',
+            'consgood':rawdatapath+'Consensus/Training/HmConsGood20210525.msp',
+            'conssemi':rawdatapath+'Consensus/Training/HmConsSemi20210525.msp',
+            'tmt':rawdatapath+'TMT/Validation/mouse_tmt_selected.msp'
         }
         # Positions of labels (Name:) in experimental msp files
         self.fpos = {
@@ -620,11 +640,19 @@ class EvalObj(LoadObj):
             'mab': np.loadtxt(path+'input_data/msp_pos/mabposraw.txt'),
             # 'consbest':np.loadtxt(path+'input_data/msp_pos/consbestposraw.txt'),
             # 'consgood':np.loadtxt(path+'input_data/msp_pos/consgoodposraw.txt'),
-            # 'conssemi':np.loadtxt(path+'input_data/msp_pos/conssemiposraw.txt')
+            # 'conssemi':np.loadtxt(path+'input_data/msp_pos/conssemiposraw.txt'),
+            'tmt': np.loadtxt(path+'input_data/msp_pos/tmtpos.txt')
+        }
+        # Filenames of predicted msp files
+        self.fnmspred = {
+            # 'valuniq': path+'predictions/prositplus/valuniq_prositplus.msp',
+            # 'consbest': path+'predictions/prositplus/consbest_prositplus.msp',
+            # 'consgood': path+'predictions/prositplus/consgood_prositplus.msp',
+            # 'conssemi': path+'predictions/prositplus/conssemi_prositplus.msp'
         }
         # Positions of labels (Name:) in predicted msp files
         self.fpospred = {
-            'valuniq': np.loadtxt(path+'./input_data/msp_pos/valuniqpospred.txt'),
+            # 'valuniq': np.loadtxt(path+'./input_data/msp_pos/valuniqpospred.txt'),
             # 'consbest':np.loadtxt(path+'input_data/msp_pos/consbestpospred.txt'),
             # 'consgood':np.loadtxt(path+'input_data/msp_pos/consgoodpospred.txt'),
             # 'conssemi':np.loadtxt(path+'input_data/msp_pos/conssemipospred.txt'),
@@ -637,9 +665,9 @@ class EvalObj(LoadObj):
             line.split()[0]:[int(line.split()[1]), float(line.split()[2])] 
             for line in open(path+'input_data/ion_stats/ion_stats_train.txt', 'r')
         }
-        proinds = np.loadtxt(path+'input_data/ion_stats/proinds.txt').astype('int')
-        self.prosit_filter = np.zeros(len(dobj.dictionary), dtype='int') 
-        self.prosit_filter[proinds]=1
+        # proinds = np.loadtxt(path+'input_data/ion_stats/proinds.txt').astype('int')
+        # self.prosit_filter = np.zeros(len(dobj.dictionary), dtype='int') 
+        # self.prosit_filter[proinds]=1
     
     def add_labeldic(self, dset):
         """

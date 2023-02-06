@@ -6,12 +6,16 @@ Created on Wed Jul  6 13:15:26 2022
 """
 ROOT_INT = 2
 EMBED = False
+CONFIG = None
+WEIGHTS = None
+RESTART = None
+TRANSFER = False
+LR = 3e-4
 
 import numpy as np
 import sys
 import os
 from time import time
-import collections
 import torch
 from models import FlipyFlopy
 import matplotlib.pyplot as plt
@@ -41,22 +45,21 @@ trlab = np.array([line.strip() for line in
                   open('input_data/labels/training_labels.txt','r')])
 
 # validation
+vallab = np.array([line.strip() for line in 
+                  open('input_data/labels/validation_labels.txt','r')])
 fposval = np.loadtxt('input_data/txt_pos/fposval.txt')
-g = open("input_data/datasets/val.txt", "r")
-intorch_val = L.input_from_file(fposval, 'input_data/datasets/val.txt')[0]
-targ_val,mz_val = L.target(fposval, g)
-g.close()
+val_point = open("input_data/datasets/val.txt", "r")
 # testing
+telab = np.array([line.strip() for line in 
+                  open('input_data/labels/testing_labels.txt','r')])
 fposte = np.loadtxt('input_data/txt_pos/fpostest.txt')
-g = open("input_data/datasets/test.txt", "r")
-intorch_test = L.input_from_file(fposte,'input_data/datasets/test.txt')[0]
-targ_test,mz_test = L.target(fposte, g)
+test_point = open("input_data/datasets/test.txt", "r")
 # find long sequence for mirrorplot
 Lens = []
 for pos in fposte:
-    g.seek(pos);Lens.append(len(g.readline().split()[1].split('|')[0]))
+    test_point.seek(pos) 
+    Lens.append(len(test_point.readline().split()[1].split('|')[0]))
 MPIND = np.argmax(Lens)
-g.close()
 
 ###############################################################################
 ################################## Model ######################################
@@ -64,34 +67,52 @@ g.close()
 
 arrdims=21
 Blocks=9
-model = FlipyFlopy(
-    in_ch=D.channels,
-    seq_len=D.seq_len,
-    out_dim=len(D.dictionary),
-    embedsz=256,
-    blocks=Blocks,
-    head=(16,16,64),
-    units=None,
-    filtlast=512,
-    mask=False,
-    CEembed=EMBED,
-    device=device
-    )
+
+# Configuration dictionary
+if CONFIG != None:
+    # Load config
+    model_config = {
+        line.split("\t")[0]:eval(line.split("\t")[1]) 
+        for line in open(CONFIG,"r")
+    }
+else:
+    model_config = {
+        'in_ch': D.channels,#seq_channels,
+        'seq_len': D.seq_len,
+        'out_dim': len(D.dictionary),
+        'embedsz': 256,
+        'blocks': Blocks,
+        'head': (16,16,64),
+        'units': None,
+        'filtlast': 512,
+        'mask': False,
+        'CEembed': EMBED,
+    }
+with open("./saved_models/config.tsv", 'w') as g:
+    for a,b in model_config.items(): g.write("%s\t%s\n"%(a,b))
+
+# Instantiate model
+model = FlipyFlopy(**model_config, device=device)
+model.to(device)
+
+# Load weights
+if WEIGHTS != None:
+    model.load_state_dict(torch.load(WEIGHTS))
+
+# TRANSFER LEARNING
+if TRANSFER:
+    model.final = torch.nn.Sequential(torch.nn.Linear(512,D.dicsz), torch.nn.Sigmoid())
+    for parm in model.parameters(): parm.requires_grad=False
+    for parm in model.final.parameters(): parm.requires_grad=True
+
 sys.stdout.write("Total model parameters: ")
 model.total_params()
 
-# Load weights
-# model.load_state_dict(torch.load("./saved_models/ckpt_epoch0_0.8911"))
-
-# TRANSFER LEARNING
-# model.final = torch.nn.Sequential(torch.nn.Linear(512,D.dicsz), torch.nn.Sigmoid())
-# for parm in model.parameters(): parm.requires_grad=False
-# for parm in model.final.parameters(): parm.requires_grad=True
-
-# loading optimizer state requires it to be initialized with model GPU parms
-# model.to(device)
-opt = torch.optim.Adam(model.parameters(), 3e-4)
-# opt.load_state_dict(torch.load('./saved_models/opt.sd', map_location=device))
+# Optimizer
+opt = torch.optim.Adam(model.parameters(), LR)
+if RESTART != None:
+    # loading optimizer state requires it to be initialized with model GPU parms
+    opt.load_state_dict(torch.load(RESTART, map_location=device))
 
 ###############################################################################
 ########################### Loss function #####################################
@@ -124,10 +145,10 @@ def train_step(samples, targ):
     opt.step()
     return loss
 
-def Testing(batch_size, Ids, Tds):
+def Testing(labels, pos, pointer, batch_size):
     with torch.no_grad():
         model.eval()
-        tot = Ids[0].shape[0]
+        tot = len(labels)
         steps = (tot//batch_size) if tot%batch_size==0 else (tot//batch_size)+1
         model.to(device)
         Loss = 0
@@ -136,9 +157,12 @@ def Testing(batch_size, Ids, Tds):
             begin = m*batch_size
             end = (m+1)*batch_size
             # Test set
-            samplesgpu = [n[begin:end].to(device) for n in Ids]
+            targ,_ = L.target(pos[begin:end], fp=pointer, return_mz=False)
+            samplesgpu = [n.to(device) for n in 
+                          L.input_from_str(labels[begin:end])[0]
+            ]
             out,out2,FMs = model(samplesgpu)
-            loss = LossFunc(Tds[begin:end].to(device), out)
+            loss = LossFunc(targ.to(device), out)
             Loss += loss.sum()
             arr += torch.tensor([[n for n in m] for m in out2])
     model.to('cpu')
@@ -159,11 +183,11 @@ def train(epochs,
     steps = tot//batch_size if tot%batch_size==0 else tot//batch_size + 1
     
     # Testing before training begins
-    test,_ = Testing(batch_size, intorch_test, targ_test)
-    val,_ = Testing(batch_size, intorch_val, targ_val)
+    test_loss, tarr = Testing(telab, fposte, test_point, batch_size)
+    val_loss, varr = Testing(vallab, fposval, val_point, batch_size)
     mirrorplot(MPIND)
-    if svwts: torch.save(model.state_dict(), 'saved_models/ckpt_%.4f'%(-val))
-    print("Val/Test: %6.3f / %6.3f"%(-val,-test))
+    if svwts: torch.save(model.state_dict(), 'saved_models/ckpt_%.4f'%(-val_loss))
+    print("Val/Test: %6.3f / %6.3f"%(-val_loss,-test_loss))
     
     # Training loop
     for i in range(epochs):
@@ -173,7 +197,7 @@ def train(epochs,
             opt.param_groups[0]['lr'] *= lr_decay_rate
         
         # trainintime=[]
-        runav = collections.deque(maxlen=50)
+        runav = np.zeros((50,))
         train_loss = 0
         # Train an epoch
         for j in range(steps):
@@ -185,20 +209,20 @@ def train(epochs,
             # samples = intorch[P[begin:end]]
             samples,info = L.input_from_str(trlab[P[begin:end]])
             targ,_ = L.target(fpostr[P[begin:end]], fp=ftr, return_mz=False)
-            Loss = train_step(samples, targ, False)
+            Loss = train_step(samples, targ)
             train_loss += Loss
             
-            runav.append(float(Loss.to('cpu').detach().numpy()))
+            runav[j%50] = float(Loss.to('cpu').detach().numpy())
             # trainintime.append(runav[-1])
-            if j%50==0: sys.stdout.write("\rStep %d/%d; Loss: %.3f (%.2f s)"%(
+            if j%50==0: sys.stdout.write("\r\033[KStep %d/%d; Loss: %.3f (%.2f s)"%(
                     j+1, steps, np.mean(runav), time()-start_step)
             )
         
         # Testing after training epoch
         train_loss = train_loss.to('cpu').detach().numpy() / steps
         sys.stdout.write("\rTesting...%50s"%(""))
-        test_loss, tarr = Testing(batch_size, intorch_test, targ_test)
-        val_loss, varr = Testing(batch_size, intorch_val, targ_val)
+        test_loss, tarr = Testing(telab, fposte, test_point, batch_size)
+        val_loss, varr = Testing(vallab, fposval, val_point, batch_size)
         testintime.append(float(test_loss))
         validintime.append(float(val_loss))
         
@@ -223,11 +247,11 @@ def train(epochs,
                     if file.split('_')[0]=='ckpt': 
                         os.remove('./saved_models/%s'%file)
                 torch.save(model.state_dict(), 
-                           "saved_models/ckpt_epoch%d_%.4f"%(i,-val_loss)
+                            "saved_models/ckpt_epoch%d_%.4f"%(i,-val_loss)
                 )
         elif (svwts=='all') | (svwts==True):
             torch.save(model.state_dict(), 
-                       "saved_models/ckpt_epoch%d_%.4f"%(i,-val_loss)
+                        "saved_models/ckpt_epoch%d_%.4f"%(i,-val_loss)
             )
             torch.save(opt.state_dict(), "saved_models/opt.sd")
         
@@ -243,20 +267,19 @@ def mirrorplot(iloc=0, epoch=0, maxnorm=True, save=True):
     model.eval()
     model.to("cpu")
     
-    with open("input_data/datasets/test.txt") as g:
-        g.seek(fposte[iloc])
-        [seq,mod,charge,ev,nmpks] = g.readline().split()[1].split('|')
-        sample = [m[iloc:iloc+1] for m in intorch_test]
-        [targ,mz] = [m.squeeze().detach().numpy() for m in 
-                     L.target(fposte[iloc:iloc+1], g)]
+    sample,info = L.input_from_str(telab[iloc:iloc+1])
+    (seq,mod,charge,ev,nce) = info[0]
+    [targ,mz] = [m.squeeze().detach().numpy() for m in 
+                  L.target(fposte[iloc:iloc+1], test_point, return_mz=True)]
     with torch.no_grad():
         pred = model(sample)[0].squeeze().detach().numpy()
     if maxnorm: pred /= pred.max()
+    if maxnorm: targ /= targ.max()
     
     # Calculate masses for each dictionary key-string, ignoring the doubled up p/p^1
     mzpred = np.array([D.calcmass(seq,charge,mod,key) 
-                       for key,value in 
-                       D.dictionary.items()]
+                        for key,value in 
+                        D.dictionary.items()]
     )
     sort = mzpred.argsort() # ion dictionary index to m/z ascending order
     pred = pred[sort]
@@ -298,4 +321,4 @@ def mirrorplot(iloc=0, epoch=0, maxnorm=True, save=True):
         fig.savefig("C:/Users/jsl6/Desktop/mirroplot%d_%d.jpg"%(iloc,epoch))
         plt.close()
 
-# train(25, 100, lr_decay_start=13, lr_decay_rate=0.9, svwts='top')
+train(25, 100, lr_decay_start=12, lr_decay_rate=0.8, svwts='top')

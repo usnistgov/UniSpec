@@ -10,7 +10,7 @@ from utils import DicObj, EvalObj
 import matplotlib.pyplot as plt
 plt.close('all')
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-PATH = "C:/Users/jsl6/Documents/Python Scripts/Pytorch/SpecPred/prosit/AIData7/"
+PATH = "C:/Users/jsl6/Documents/Python Scripts/Pytorch/SpecPred/prosit/AIData8/"
 
 # Instantiate DicObj
 criteria = [line.strip() for line in 
@@ -20,11 +20,11 @@ D = DicObj(criteria=criteria)
 # Instantiate model
 config = {
     line.split("\t")[0]:eval(line.split("\t")[1]) 
-    for line in open(PATH+"saved_models/archive/220106/config.tsv","r")
+    for line in open(PATH+"saved_models/230203/config.tsv","r")
 }
 model1 = FlipyFlopy(**config, device=device)
 model1.load_state_dict(
-    torch.load(PATH+'saved_models/archive/220106/ckpt_epoch16_0.9263')
+    torch.load(PATH+'saved_models/230203/ckpt_0.9274')
 )
 
 # Instantiate EvalObj

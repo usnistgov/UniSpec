@@ -16,7 +16,7 @@ import numpy as np
 
 """
 Initializers for various model tensors
-- Very add hoc for head(16,16,64), embedsz=256. If these parameters change,
+- Very ad hoc for head(16,16,64), embedsz=256. If these parameters change,
   may need to change the initializers somewhat for optimal training.
 """
 nm = 0.03
@@ -330,7 +330,7 @@ class FlipyFlopy(nn.Module):
         else:
             pos = (
                 np.arange(seq_len)[:,None] * 
-                np.exp(-np.log(10000) * 
+                np.exp(-np.log(1000) * 
                        np.arange(embedsz//2)/(embedsz//2)
                 )[None]
             )
@@ -434,7 +434,7 @@ class FlipyFlopy(nn.Module):
             [inp, inpch, inpce] = inp
             
             ch_embed = nn.functional.silu(
-                self.denseCH(self.embedCE(inpch, self.cesz))
+                self.denseCH(self.embedCE(inpch, self.cesz, 100))
             )
             ce_embed = nn.functional.silu(
                 self.denseCE(self.embedCE(inpce, self.cesz))
