@@ -1,30 +1,73 @@
-       2C2H5NOS     785
-        2CH3SOH   97960
+       2C2H5NOS   15337
+        2CH3SOH  111041
    2CH3SOH-2H2O     147
-    2CH3SOH-H2O   25150
-           2H2O  961076
+    2CH3SOH-H2O   29336
+           2H2O 1494776
          2H3PO4  116152
          2H5PO5   12762
           2HPO3    6601
-           2NH3 1392713
-       3C2H5NOS      40
-        3CH3SOH    2364
+           2NH3 2833518
+       3C2H5NOS    2468
+        3CH3SOH    2578
    3CH3SOH-2H2O       2
-    3CH3SOH-H2O     716
+    3CH3SOH-H2O     767
          3H3PO4    9682
          3H5PO5     453
           3HPO3     391
-       4C2H5NOS       6
-       5C2H5NOS       2
-        C2H5NOS  477128
-         CH3SOH 2748807
+       4C2H5NOS     491
+       5C2H5NOS     129
+       6C2H5NOS      41
+       7C2H5NOS       5
+        C2H5NOS 1081813
+         CH3SOH 3423841
     CH3SOH-2H2O    5317
-     CH3SOH-H2O  843922
-            H2O 20421425
-         H2O+CO 2700839
-        H2O-NH3 3846397
+     CH3SOH-H2O 1079191
+            H2O 28988777
+         H2O+CO 4526101
+        H2O-NH3 5651867
           H3PO4  936399
           H5PO5  398505
           H7PO6   81795
            HPO3  118825
-            NH3 13259928
+            NH3 21106008
+          RP126   35622
+      RP126-H2O    1358
+  RP126-H2O-NH3     941
+      RP126-NH3    5627
+         RP127C   94844
+     RP127C-H2O    7028
+ RP127C-H2O-NH3    4874
+     RP127C-NH3   46262
+         RP127N   12962
+     RP127N-H2O    1465
+ RP127N-H2O-NH3    1750
+     RP127N-NH3   16116
+         RP128C   40949
+     RP128C-H2O   25355
+ RP128C-H2O-NH3   11530
+     RP128C-NH3   11022
+         RP128N   78213
+     RP128N-H2O   16651
+ RP128N-H2O-NH3   22209
+     RP128N-NH3   64879
+         RP129C   86624
+     RP129C-H2O    4934
+ RP129C-H2O-NH3    1619
+     RP129C-NH3   11868
+         RP129N   16992
+     RP129N-H2O     931
+ RP129N-H2O-NH3     737
+     RP129N-NH3   18171
+         RP130C  106279
+     RP130C-H2O   15183
+ RP130C-H2O-NH3   10482
+     RP130C-NH3   24005
+         RP130N   23558
+     RP130N-H2O    3785
+ RP130N-H2O-NH3    7756
+     RP130N-NH3   34109
+          RP131   85971
+      RP131-H2O   34623
+  RP131-H2O-NH3   21918
+      RP131-NH3   50761
+            TMT  371845
