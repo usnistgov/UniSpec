@@ -1,0 +1,9 @@
+Acetyl
+Carbamidomethyl
+CAM
+Gln->pyro-Glu
+TMT6plex
+Glu->pyro-Glu
+Oxidation
+Phospho
+Pyro-carbamidomethyl

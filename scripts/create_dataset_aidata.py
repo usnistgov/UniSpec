@@ -1,5 +1,5 @@
 """
-1. Collect sub-stats
+1. Survey dataset, collect sub-stats
 files = train
 write = False
 write_stats = False
@@ -28,46 +28,35 @@ collect_modifications=False
 collect_tmt          =False
 collect_labels       =True
 collect_others       =False
+curdir               ="C:/Users/jsl6/Documents/Python Scripts/Pytorch/SpecPred/prosit/AIData8/"
+itpath               ="./ion_types.txt"
+nlpath               ="./neutral_losses.txt"
+lcipath              ='./length_charge_iso.txt'
+trfpath              ='./train_files.txt'
+valfpath             ='./val_files.txt'
+tefpath              ='./test_files.txt'
+pepcrit              ='./peptide_criteria.txt'
+modpath              ='./modifications.txt'
 import numpy as np 
 import sys
 import re
 from time import time
+sys.path.append(curdir)
+pep = {line.split()[0]:int(line.split()[1]) for line in open(pepcrit, 'r')}
+pep['modifications'] = open(modpath,'r').read().split("\n")
 
 ###############################################################################
 ############################### Ion dictionary ################################
 ###############################################################################
 
-it = {b:a for a,b in enumerate(['a','b','p','y','ICCAM',
-                                'ICA','IDA','IDB','IEA','IFA','IFB','IHA','IHB',
-                                'IHC','IHD','IHE','IHF','IIA','IIC','IKA','IKB',
-                                'IKC','IKD','IKE','IKF','ILA','ILC','IMA','IMB',
-                                'IMC','INA','INB','IPA','IQA','IQB','IQC','IQD',
-                                'IRA','IRB','IRC','IRD','IRE','IRF','IRG','IRH',
-                                'IRI','IRJ','ISA','ITA','ITB','IVA','IVC','IVD',
-                                'IWA','IWB','IWC','IWD','IWE','IWF','IWH','IYA',
-                                'IYB','IYC',
-                                'TMTpH','TMT126','TMT127C','TMT127N','TMT128C',
-                                'TMT128N','TMT129C','TMT129N','TMT130C','TMT130N',
-                                'TMT131'])}
-mer = np.arange(1,40,1)
-neut = {b:a for a,b in enumerate([
-    '','H2O','H2O-NH3','H2O+CO','2H2O','NH3','2NH3', 
-    '2CH3SOH-H2O','2CH3SOH-2H2O','3CH3SOH','3CH3SOH-H2O','3CH3SOH-2H2O',
-    'C2H5NOS','2C2H5NOS','3C2H5NOS','4C2H5NOS','5C2H5NOS','6C2H5NOS','7C2H5NOS',
-    'CH3SOH','CH3SOH-H2O','CH3SOH-2H2O','2CH3SOH', 
-    'HPO3','2HPO3','3HPO3','H3PO4', '2H3PO4', '3H3PO4',
-    'H5PO5','2H5PO5','3H5PO5','H7PO6',
-    'RP126','RP126-H2O','RP126-H2O-NH3','RP126-NH3','RP127C','RP127C-H2O',
-    'RP127C-H2O-NH3','RP127C-NH3','RP127N','RP127N-H2O','RP127N-H2O-NH3',
-    'RP127N-NH3','RP128C','RP128C-H2O','RP128C-H2O-NH3','RP128C-NH3','RP128N',
-    'RP128N-H2O','RP128N-H2O-NH3','RP128N-NH3','RP129C','RP129C-H2O',
-    'RP129C-H2O-NH3','RP129C-NH3','RP129N','RP129N-H2O','RP129N-H2O-NH3',
-    'RP129N-NH3','RP130C','RP130C-H2O','RP130C-H2O-NH3','RP130C-NH3','RP130N',
-    'RP130N-H2O','RP130N-H2O-NH3','RP130N-NH3','RP131','RP131-H2O',
-    'RP131-H2O-NH3','RP131-NH3','TMT'
-    ])}
-chars = ['','^1','^2','^3','^4','^5']
-isotopes = ['','i','2i','3i','4i','5i']
+it = {b:a for a,b in enumerate(open(itpath,'r').read().split("\n"))}
+neut = {b:a for a,b in enumerate(['']+open(nlpath,'r').read().split("\n"))}
+lci = {line.split()[0]:int(line.split()[1]) for line in open(lcipath,'r')}
+mer = np.arange(1,lci['max_length'],1)
+chars = ['']+['^'+str(i) for i in np.arange(1,lci['max_charge']+1,1)]
+isotopes = ['']+['i' if i==1 else str(i)+'i' 
+                 for i in np.arange(1,lci['max_isotope']+1,1)
+                ]
 # Create a dictionary for target indices
 if combo:
     f = open("combo_dictionary.txt", "w")
@@ -83,6 +72,10 @@ if combo:
                         # add a plus sign is isotopic peak
                         isp = '+%s'%isp if isp!='' else isp
                         
+                        """
+                        Cut down on permuations by adding limiting criteria
+                        here.
+                        """
                         # a-ions have no losses
                         if (ityp=='a') & (ni!=''):
                             continue
@@ -129,14 +122,14 @@ if combo:
     f.close()
     # add internals
     if not collect_internals:
-        for i,line in enumerate(open("input_data/ion_stats/internal_counts.txt","r")):
+        for i,line in enumerate(open(curdir+"input_data/ion_stats/internal_counts.txt","r")):
             if int(line.split()[1])>0: dictionary[line.split()[0]] = len(dictionary)
 else:
     """Alternatively I could create a dictionary beforehand and read it in from
     file here. This could be useful if I get rid of all the ion types that are
     absent from the combination of train/val/test sets."""
     from utils import DicObj
-    criteria = open("input_data/ion_stats/criteria.txt","r").read().split("\n")
+    criteria = open(curdir+"input_data/ion_stats/criteria.txt","r").read().split("\n")
     D = DicObj(criteria=criteria)
     dictionary = D.dictionary
 revdictionary = {n:m for m,n in dictionary.items()}
@@ -145,29 +138,19 @@ revdictionary = {n:m for m,n in dictionary.items()}
 ############################# Main part of script #############################
 ###############################################################################
 
-train_files = [
-        'C:/Users/jsl6/MyDatasets/MassSpec/AIData/Training/AItrain_EliteHuman_2022418v2_edit2.msp',
-        'C:/Users/jsl6/MyDatasets/MassSpec/AIData/Training/AItrain_LumosPhospho_2022418v2_2023J1_edit2.msp',
-        'C:/Users/jsl6/MyDatasets/MassSpec/AIData/Training/AItrain_LumosSynthetic_2022418v2_edit2.msp',
-        'C:/Users/jsl6/MyDatasets/MassSpec/AIData/Training/AItrain_QEHumanCho_2022418v2_edit2.msp',
-        'C:/Users/jsl6/MyDatasets/MassSpec/AIData/Training/AItrain_VelosHumanCho_2022418v2_edit2.msp',
-        'C:/Users/jsl6/MyDatasets/MassSpec/TMT/Training/cptac3_tmt_selected_passed_best_1.msp',
-        'C:/Users/jsl6/MyDatasets/MassSpec/TMT/Training/cptac3_tmt_selected_passed_best_2.msp',
-        'C:/Users/jsl6/MyDatasets/MassSpec/TMT/Training/cptac3_tmt_selected_passed_best_3.msp'
-] # skip 3 lines
-test_files = ['C:/Users/jsl6/MyDatasets/MassSpec/AIData/Testing/TestUniq202277_2023J1_edit.msp']
-val_files = ['C:/Users/jsl6/MyDatasets/MassSpec/AIData/Validation/ValidUniq2022418_2023J1_edit.msp']
+train_files = open(trfpath,'r').read().split("\n")
+test_files = open(tefpath,'r').read().split("\n")
+val_files = open(valfpath,'r').read().split("\n")
 all_files = test_files+val_files+train_files
 Files = (
          train_files if files=='train' else (
          val_files if files=='val' else (
          test_files if files=='test' else sys.exit('Choose either train/val/test')
          )))
-skiplines = 5 if files=='train' else 5 # lines between Name: and Num peaks
 
 if write:
-    g = open("dataset.txt", 'w')
-    h = open("fpos.txt", 'w')
+    g = open(curdir+"dataset.txt", 'w')
+    h = open(curdir+"fpos.txt", 'w')
 neutlst=[];modlst=[];intlst=[];immlst=[];labels=[];tmtlst=[]
 LENGTHS = [];CHARGES = [];ENERGIES = [];others={}
 dic_counter = np.zeros((len(dictionary),3))
@@ -196,12 +179,12 @@ for file in Files:
                 mods = ([re.sub("[()]",'',m).split(',') for m in Mods[Mstart:].split(')(')]
                         if modamt>0 else []
                 )
-                typ='';modlst2 = []
+                typ='';mod_types = []
                 seqInt =  list(seq) # seqInt will be written in the Internal style, i.e. lowercase PTMs
                 for mod in mods:
                     [pos,aa,typ] = [int(mod[0]),mod[1],mod[2]]
                     seqInt[int(mod[0])] = seqInt[int(mod[0])].lower()
-                    modlst2.append(typ)
+                    mod_types.append(typ)
                     if collect_modifications: modlst.append(typ)
                 seqInt = "".join(seqInt)
                 # print("\r\033[K%s"%seqInt.strip(), end='')
@@ -266,7 +249,17 @@ for file in Files:
                 # - if statements limit the types of peptides I use
                 if write | write_stats:
                     mx = np.max(Ints) # intensities scaled between 0-1
-                    if (len(seq)<=40) and (ce>=0) and (ce<=1000) and (charge<=8):
+                    modbool = [True if i in pep['modifications'] else False 
+                               for i in mod_types]
+                    if (
+                        (len(seq)>=pep['min_length']) & 
+                        (len(seq)<=pep['max_length']) & 
+                        (ce>=pep['min_energy']) & 
+                        (ce<=pep['max_energy']) & 
+                        (charge>=pep['min_charge']) &
+                        (charge<=pep['max_charge']) &
+                        (False not in modbool)
+                    ):
                         labels.append(label.strip())
                         if write: h.write("%d "%g.tell())
                         if write: g.write("NAME: %s|%s|%d|%.1f|%d\n"%(
@@ -309,7 +302,7 @@ if collect_tmt:
         for a,b in zip(E,cntse): f.write('%15s %7d\n'%(a,b))
 if write_stats:
     dic_counter[:,-1] = dic_counter[:,1] / np.maximum(dic_counter[:,0],1) # average intensity
-    with open('input_data/ion_stats/ion_stats.txt','w') as f:
+    with open(curdir+'input_data/ion_stats/ion_stats.txt','w') as f:
         for a,b,c in zip(
                 dictionary.keys(),
                 dic_counter[:,0],

@@ -1,0 +1,3 @@
+max_length 40
+max_charge 5
+max_isotope 5
