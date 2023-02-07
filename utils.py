@@ -5,6 +5,7 @@ Created on Mon Sep 26 08:18:11 2022
 @author: jsl6
 """
 import re
+import os
 import numpy as np
 import torch
 import matplotlib.pyplot as plt
@@ -16,6 +17,7 @@ class DicObj:
                  seq_len = 40,
                  chlim = [1,8],
                  criteria=['occurs>0'],
+                 massdir="./input_data/"
                  ):
         self.seq_len = seq_len
         self.chlim = chlim
@@ -28,50 +30,54 @@ class DicObj:
         }
         self.revmdic = {b:a for a,b in self.mdic.items()}
         
-        # proteomicsresource.washington.edu/protocols06/masses.php
-        # www.unimod.org/login.php?a=logout
-        self.mass = {
-            # Amino acids
-            'A': 71.037113805,'R':156.101111050,'N':114.042927470,'D':115.026943065,
-            'C':103.009184505,'Q':128.058577540,'E':129.042593135,'G': 57.021463735,
-            'H':137.058911875,'I':113.084064015,'L':113.084064015,'K':128.094963050,
-            'M':131.040484645,'F':147.068413945,'P': 97.052763875,'S': 87.032028435,
-            'T':101.047678505,'W':186.079312980,'Y':163.063328575,'V': 99.068413945,
-            # Neutral losses
-            'NH2':16.0187,'NH3':17.0265+4.9e-5,'H2O':18.010565,'CO':27.994915,
-            'C2H5NOS':91.009184,'CH2SH':46.9955+0.0458,'CH3SOH':63.99828544,
-            'HPO3':79.966335,'H3PO4':97.9769,'H5PO5':115.987465,'H7PO6':133.99803,
-            'TMT':229.17,'RP126':154.1221,'RP127N':155.1192,'RP127C':155.1254,
-            'RP128N':156.1225,'RP128C':156.1287,'RP129N':157.1258,'RP129C':157.1322,
-            'RP130N':158.1291,'RP130C':158.1356,'RP131':159.1325,
-            # Modifications
-            'Acetyl':42.010565,'Carbamidomethyl':57.021464,'Oxidation':15.994915,
-            'Gln->pyro-Glu':-17.026549, 'Glu->pyro-Glu':-18.010565,'Phospho':79.966331,
-            'Pyro-carbamidomethyl':39.994915,'CAM':57.021464,'TMT6plex':231.17747,
-            # Isotopes
-            'i':1.00727646688,'iso1':1.003,'iso2':1.002,
-            # Ions, immoniums, et al.
-            'a':-26.9871,'b':1.007276, 'p':20.02656, 'y':19.0184,
-            'ICA':76.021545, 'IDA':88.039304, 'IDB':70.028793, 'IEA':102.054954,
-            'IFA':120.080775,'IFB':91.054226, 'IHA':110.071273,'IHB':82.05255,
-            'IHC':121.039639,'IHD':123.055289,'IHE':138.066188,'IHF':156.076753,
-            'IIA':86.096425, 'IIC':72.080776, 'IKA':101.107324,'IKB':112.07569,
-            'IKC':84.080776, 'IKD':129.102239,'IKE':56.049476, 'IKF':175.118952,
-            'ILA':86.096426, 'ILC':72.080776, 'IMA':104.052846,'IMB':61.010647,
-            'IMC':120.047761,'INA':87.055289, 'INB':70.02874,  'IPA':70.065126, 
-            'IQA':101.070939,'IQB':56.049476, 'IQC':84.04439,  'IQD':129.065854,
-            'IRA':129.113473,'IRB':59.060375, 'IRC':70.065126, 'IRD':73.076025, 
-            'IRE':87.091675, 'IRF':100.086924,'IRG':112.086924,'IRH':60.055624,
-            'IRI':116.070605,'IRJ':175.118952,'ISA':60.04439,  'ITA':74.06004, 
-            'ITB':119.0814,  'IVA':72.080776, 'IVC':55.054227, 'IVD':69.033491,
-            'IWA':159.091675,'IWB':77.038577, 'IWC':117.057301,'IWD':130.065126,
-            'IWE':132.080776,'IWF':170.06004, 'IWH':142.065126,'IYA':136.07569,
-            'IYB':91.054227, 'IYC':107.049141,
-            'ICCAM':133.04301,
-            'TMTpH':230.17,'TMT126':126.1277,'TMT127N':127.1248,'TMT127C':127.1311,
-            'TMT128N':128.1281,'TMT128C':128.1344,'TMT129N':129.1315,
-            'TMT129C':129.1378,'TMT130N':130.1348,'TMT130C':130.1411,'TMT131':131.1382
-        }
+        if 'masses.txt' in os.listdir(massdir):
+            self.mass = {line.split()[0]:float(line.split()[1]) for line in 
+                          open(path+"input_data/masses.txt",'r')}
+        else:
+            # proteomicsresource.washington.edu/protocols06/masses.php
+            # www.unimod.org/login.php?a=logout
+            self.mass = {
+                # Amino acids
+                'A': 71.037113805,'R':156.101111050,'N':114.042927470,'D':115.026943065,
+                'C':103.009184505,'Q':128.058577540,'E':129.042593135,'G': 57.021463735,
+                'H':137.058911875,'I':113.084064015,'L':113.084064015,'K':128.094963050,
+                'M':131.040484645,'F':147.068413945,'P': 97.052763875,'S': 87.032028435,
+                'T':101.047678505,'W':186.079312980,'Y':163.063328575,'V': 99.068413945,
+                # Neutral losses
+                'NH2':16.0187,'NH3':17.0265+4.9e-5,'H2O':18.010565,'CO':27.994915,
+                'C2H5NOS':91.009184,'CH2SH':46.9955+0.0458,'CH3SOH':63.99828544,
+                'HPO3':79.966335,'H3PO4':97.9769,'H5PO5':115.987465,'H7PO6':133.99803,
+                'TMT':229.17,'RP126':154.1221,'RP127N':155.1192,'RP127C':155.1254,
+                'RP128N':156.1225,'RP128C':156.1287,'RP129N':157.1258,'RP129C':157.1322,
+                'RP130N':158.1291,'RP130C':158.1356,'RP131':159.1325,
+                # Modifications
+                'Acetyl':42.010565,'Carbamidomethyl':57.021464,'Oxidation':15.994915,
+                'Gln->pyro-Glu':-17.026549, 'Glu->pyro-Glu':-18.010565,'Phospho':79.966331,
+                'Pyro-carbamidomethyl':39.994915,'CAM':57.021464,'TMT6plex':231.17747,
+                # Isotopes
+                'i':1.00727646688,'iso1':1.003,'iso2':1.002,
+                # Ions, immoniums, et al.
+                'a':-26.9871,'b':1.007276, 'p':20.02656, 'y':19.0184,
+                'ICA':76.021545, 'IDA':88.039304, 'IDB':70.028793, 'IEA':102.054954,
+                'IFA':120.080775,'IFB':91.054226, 'IHA':110.071273,'IHB':82.05255,
+                'IHC':121.039639,'IHD':123.055289,'IHE':138.066188,'IHF':156.076753,
+                'IIA':86.096425, 'IIC':72.080776, 'IKA':101.107324,'IKB':112.07569,
+                'IKC':84.080776, 'IKD':129.102239,'IKE':56.049476, 'IKF':175.118952,
+                'ILA':86.096426, 'ILC':72.080776, 'IMA':104.052846,'IMB':61.010647,
+                'IMC':120.047761,'INA':87.055289, 'INB':70.02874,  'IPA':70.065126, 
+                'IQA':101.070939,'IQB':56.049476, 'IQC':84.04439,  'IQD':129.065854,
+                'IRA':129.113473,'IRB':59.060375, 'IRC':70.065126, 'IRD':73.076025, 
+                'IRE':87.091675, 'IRF':100.086924,'IRG':112.086924,'IRH':60.055624,
+                'IRI':116.070605,'IRJ':175.118952,'ISA':60.04439,  'ITA':74.06004, 
+                'ITB':119.0814,  'IVA':72.080776, 'IVC':55.054227, 'IVD':69.033491,
+                'IWA':159.091675,'IWB':77.038577, 'IWC':117.057301,'IWD':130.065126,
+                'IWE':132.080776,'IWF':170.06004, 'IWH':142.065126,'IYA':136.07569,
+                'IYB':91.054227, 'IYC':107.049141,
+                'ICCAM':133.04301,
+                'TMTpH':230.17,'TMT126':126.1277,'TMT127N':127.1248,'TMT127C':127.1311,
+                'TMT128N':128.1281,'TMT128C':128.1344,'TMT129N':129.1315,
+                'TMT129C':129.1378,'TMT130N':130.1348,'TMT130C':130.1411,'TMT131':131.1382
+            }
         
         self.dictionary = {}
         self.make_dictionary(criteria)
@@ -374,9 +380,9 @@ class LoadObj:
         info = []
         for m in range(len(strings)):
             [seq,other] = strings[m].split('/')
-            osplit = other.split("_") #TODO
-            if len(osplit)==3: osplit+=['NCE0'] #TODO
-            [charge,mod,ev,nce] = osplit#other.split('_') #TODO
+            osplit = other.split("_") #TODO Non-standard label
+            if len(osplit)==3: osplit+=['NCE0'] #TODO Non-standard label
+            [charge,mod,ev,nce] = osplit#other.split('_') #TODO Non-standard label
             charge = int(charge);ev = float(ev[:-2]);nce = float(nce[3:])
             info.append((seq,mod,charge,ev,nce))
             out = self.inptsr(info[-1])
@@ -453,7 +459,7 @@ class LoadObj:
 
         """
         hold = label.split('_')
-        if len(hold)<4: hold += ['NCE0'] #TODO
+        if len(hold)<4: hold += ['NCE0'] #TODO Non-standard label
         if typ=='ev': hold[-2] = '%.1feV'%(float(hold[-2][:-2])+ceadd)
         elif typ=='nce': hold[-1] = 'NCE%.1f'%(float(hold[-1][3:])+ceadd)
         return "_".join(hold)
@@ -527,9 +533,9 @@ class LoadObj:
                         poss.append(pos)
                     else:
                         [seq,other] = line.split()[1].split('/')
-                        otherspl = other.split('_') #TODO
-                        if len(otherspl)<4: otherspl+=['NCE0'] #TODO
-                        [charge,mods,ev,nce] = otherspl #TODO
+                        otherspl = other.split('_') #TODO Non-standard label
+                        if len(otherspl)<4: otherspl+=['NCE0'] #TODO Non-standard label
+                        [charge,mods,ev,nce] = otherspl #TODO Non-standard label
                         charge = int(charge)
                         ev=float(ev[:-2])
                         nce = float(nce[3:])
