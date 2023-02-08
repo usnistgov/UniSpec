@@ -1,5 +1,5 @@
 """
-1. Survey dataset, collect sub-stats
+1. Survey dataset, collect data
 files = train
 write = False
 write_stats = False
@@ -49,11 +49,17 @@ pep['modifications'] = open(modpath,'r').read().split("\n")
 ############################### Ion dictionary ################################
 ###############################################################################
 
+# ion types
 it = {b:a for a,b in enumerate(open(itpath,'r').read().split("\n"))}
+# neutrals plus null
 neut = {b:a for a,b in enumerate(['']+open(nlpath,'r').read().split("\n"))}
+# length, charge, isotope parameters
 lci = {line.split()[0]:int(line.split()[1]) for line in open(lcipath,'r')}
+# Fragment lengths
 mer = np.arange(1,lci['max_length'],1)
+# Fragment charges
 chars = ['']+['^'+str(i) for i in np.arange(1,lci['max_charge']+1,1)]
+# Isotopic peaks
 isotopes = ['']+['i' if i==1 else str(i)+'i' 
                  for i in np.arange(1,lci['max_isotope']+1,1)
                 ]
