@@ -17,17 +17,17 @@ combo = False
 collect_labels = True
 """
 files                ='train'
-write                =False
+write                =True
 write_stats          =False
-mode                 ='True' #'ann in dictionary.keys()' or 'True'
-combo                =True
-collect_neutrals     =True
-collect_internals    =True
-collect_immoniums    =True
-collect_modifications=True
-collect_tmt          =True
+mode                 ='ann in dictionary.keys()' #'ann in dictionary.keys()' or 'True'
+combo                =False
+collect_neutrals     =False
+collect_internals    =False
+collect_immoniums    =False
+collect_modifications=False
+collect_tmt          =False
 collect_labels       =True
-collect_others       =True
+collect_others       =False
 curdir               ="C:/Users/joell/Documents/Python/NIST/Paper3/Prosit+/Predire/"
 itpath               ="input_options/ion_types.txt"
 nlpath               ="input_options/neutral_losses.txt"
@@ -136,7 +136,7 @@ else:
     absent from the combination of train/val/test sets."""
     from utils import DicObj
     criteria = open(curdir+"input_data/ion_stats/criteria.txt","r").read().split("\n")
-    D = DicObj(criteria=criteria)
+    D = DicObj(criteria=criteria, massdir="../input_data/", statsdir='../input_data/ion_stats/')
     dictionary = D.dictionary
 revdictionary = {n:m for m,n in dictionary.items()}
 
@@ -284,7 +284,7 @@ for file in Files:
 ###############################################################################
 
 if collect_labels and (write|write_stats):
-    with open("labels.txt",'w') as f:
+    with open(curdir+'input_data/labels/'+"labels.txt",'w') as f:
         f.write("\n".join(labels))
 if collect_neutrals:
     A,cntsa = np.unique(neutlst, return_counts=True)
