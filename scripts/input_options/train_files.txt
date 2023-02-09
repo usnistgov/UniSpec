@@ -1,2 +1,8 @@
-C:/Users/joell/MyDatasets/MassSpec/Kuster/KusterSyn_MOD_1_selected_passed.msp
-C:/Users/joell/MyDatasets/MassSpec/Kuster/KusterSyn_MOD_1_phospho_selected_passed.msp
+C:/Users/jsl6/MyDatasets/MassSpec/AIData/Training/AItrain_EliteHuman_2022418v2_edit2.msp
+C:/Users/jsl6/MyDatasets/MassSpec/AIData/Training/AItrain_LumosPhospho_2022418v2_2023J1_edit2.msp
+C:/Users/jsl6/MyDatasets/MassSpec/AIData/Training/AItrain_LumosSynthetic_2022418v2_edit2.msp
+C:/Users/jsl6/MyDatasets/MassSpec/AIData/Training/AItrain_QEHumanCho_2022418v2_edit2.msp
+C:/Users/jsl6/MyDatasets/MassSpec/AIData/Training/AItrain_VelosHumanCho_2022418v2_edit2.msp
+C:/Users/jsl6/MyDatasets/MassSpec/TMT/Training/cptac3_tmt_selected_passed_best_1.msp
+C:/Users/jsl6/MyDatasets/MassSpec/TMT/Training/cptac3_tmt_selected_passed_best_2.msp
+C:/Users/jsl6/MyDatasets/MassSpec/TMT/Training/cptac3_tmt_selected_passed_best_3.msp
