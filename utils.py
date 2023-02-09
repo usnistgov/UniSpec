@@ -9,8 +9,6 @@ import os
 import numpy as np
 import torch
 import matplotlib.pyplot as plt
-path = "./"
-rawdatapath = 'C:/Users/jsl6/MyDatasets/MassSpec/'
 
 class DicObj:
     def __init__(self,
@@ -18,7 +16,7 @@ class DicObj:
                  chlim = [1,8],
                  criteria=['occurs>0'],
                  massdir="input_data/",
-                 statsdir="input_data/ion_stats/"
+                 statsdir='input_data/ion_stats/'
                  ):
         self.seq_len = seq_len
         self.chlim = chlim
@@ -651,24 +649,24 @@ class EvalObj(LoadObj):
             'valsim': np.loadtxt(curpath+'input_data/msp_pos/valposrawsim.txt'),
             'test': np.loadtxt(curpath+'input_data/msp_pos/testposraw.txt'),
             'mab': np.loadtxt(curpath+'input_data/msp_pos/mabposraw.txt'),
-            # 'consbest':np.loadtxt(curpath+'input_data/msp_pos/consbestposraw.txt'),
-            # 'consgood':np.loadtxt(curpath+'input_data/msp_pos/consgoodposraw.txt'),
-            # 'conssemi':np.loadtxt(curpath+'input_data/msp_pos/conssemiposraw.txt'),
+            # 'consbest':np.loadtxt(path+'input_data/msp_pos/consbestposraw.txt'),
+            # 'consgood':np.loadtxt(path+'input_data/msp_pos/consgoodposraw.txt'),
+            # 'conssemi':np.loadtxt(path+'input_data/msp_pos/conssemiposraw.txt'),
             'tmt': np.loadtxt(curpath+'input_data/msp_pos/tmtpos.txt')
         }
         # Filenames of predicted msp files
         self.fnmspred = {
-            # 'valuniq': curpath+'predictions/prositplus/valuniq_prositplus.msp',
-            # 'consbest': curpath+'predictions/prositplus/consbest_prositplus.msp',
-            # 'consgood': curpath+'predictions/prositplus/consgood_prositplus.msp',
-            # 'conssemi': curpath+'predictions/prositplus/conssemi_prositplus.msp'
+            # 'valuniq': path+'predictions/prositplus/valuniq_prositplus.msp',
+            # 'consbest': path+'predictions/prositplus/consbest_prositplus.msp',
+            # 'consgood': path+'predictions/prositplus/consgood_prositplus.msp',
+            # 'conssemi': path+'predictions/prositplus/conssemi_prositplus.msp'
         }
         # Positions of labels (Name:) in predicted msp files
         self.fpospred = {
-            # 'valuniq': np.loadtxt(curpath+'./input_data/msp_pos/valuniqpospred.txt'),
-            # 'consbest':np.loadtxt(curpath+'input_data/msp_pos/consbestpospred.txt'),
-            # 'consgood':np.loadtxt(curpath+'input_data/msp_pos/consgoodpospred.txt'),
-            # 'conssemi':np.loadtxt(curpath+'input_data/msp_pos/conssemipospred.txt'),
+            # 'valuniq': np.loadtxt(path+'./input_data/msp_pos/valuniqpospred.txt'),
+            # 'consbest':np.loadtxt(path+'input_data/msp_pos/consbestpospred.txt'),
+            # 'consgood':np.loadtxt(path+'input_data/msp_pos/consgoodpospred.txt'),
+            # 'conssemi':np.loadtxt(path+'input_data/msp_pos/conssemipospred.txt'),
         }
         self.lab = {}
         
@@ -678,7 +676,7 @@ class EvalObj(LoadObj):
             line.split()[0]:[int(line.split()[1]), float(line.split()[2])] 
             for line in open(curpath+'input_data/ion_stats/ion_stats_train.txt', 'r')
         }
-        # proinds = np.loadtxt(curpath+'input_data/ion_stats/proinds.txt').astype('int')
+        # proinds = np.loadtxt(path+'input_data/ion_stats/proinds.txt').astype('int')
         # self.prosit_filter = np.zeros(len(dobj.dictionary), dtype='int') 
         # self.prosit_filter[proinds]=1
     
