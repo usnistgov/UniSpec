@@ -39,6 +39,7 @@ pepcrit              ='input_options/peptide_criteria.txt'
 modpath              ='input_options/modifications.txt'
 import numpy as np 
 import sys
+import os
 import re
 from time import time
 sys.path.append(curdir)
