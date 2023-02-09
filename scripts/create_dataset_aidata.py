@@ -16,27 +16,27 @@ write_stats = False
 combo = False
 collect_labels = True
 """
-files                ='test'
-write                =True
+files                ='train'
+write                =False
 write_stats          =False
-mode                 ='ann in dictionary.keys()' #'ann in dictionary.keys()' or 'True'
-combo                =False
-collect_neutrals     =False
-collect_internals    =False
-collect_immoniums    =False
-collect_modifications=False
-collect_tmt          =False
+mode                 ='True' #'ann in dictionary.keys()' or 'True'
+combo                =True
+collect_neutrals     =True
+collect_internals    =True
+collect_immoniums    =True
+collect_modifications=True
+collect_tmt          =True
 collect_labels       =True
-collect_others       =False
-curdir               ="C:/Users/jsl6/Documents/Python Scripts/Pytorch/SpecPred/prosit/AIData8/"
-itpath               ="./ion_types.txt"
-nlpath               ="./neutral_losses.txt"
-lcipath              ='./length_charge_iso.txt'
-trfpath              ='./train_files.txt'
-valfpath             ='./val_files.txt'
-tefpath              ='./test_files.txt'
-pepcrit              ='./peptide_criteria.txt'
-modpath              ='./modifications.txt'
+collect_others       =True
+curdir               ="C:/Users/joell/Documents/Python/NIST/Paper3/Prosit+/Predire/"
+itpath               ="input_options/ion_types.txt"
+nlpath               ="input_options/neutral_losses.txt"
+lcipath              ='input_options/length_charge_iso.txt'
+trfpath              ='input_options/train_files.txt'
+valfpath             ='input_options/val_files.txt'
+tefpath              ='input_options/test_files.txt'
+pepcrit              ='input_options/peptide_criteria.txt'
+modpath              ='input_options/modifications.txt'
 import numpy as np 
 import sys
 import re
@@ -65,7 +65,7 @@ isotopes = ['']+['i' if i==1 else str(i)+'i'
                 ]
 # Create a dictionary for target indices
 if combo:
-    f = open("combo_dictionary.txt", "w")
+    f = open(curdir+'input_data/ion_stats/'+"combo_dictionary.txt", "w")
     dictionary={}
     count=0
     for ityp in it:
@@ -288,24 +288,28 @@ if collect_labels and (write|write_stats):
         f.write("\n".join(labels))
 if collect_neutrals:
     A,cntsa = np.unique(neutlst, return_counts=True)
-    with open("neutral_counts.txt", 'w') as f:
+    with open(curdir+'input_data/ion_stats/'+"neutral_counts.txt", 'w') as f:
         for a,b in zip(A,cntsa): f.write('%15s %7d\n'%(a,b))
 if collect_modifications:
     B,cntsb = np.unique(modlst, return_counts=True)
-    with open("modification_counts.txt", 'w') as f:
+    with open(curdir+'input_data/ion_stats/'+"modification_counts.txt", 'w') as f:
         for a,b in zip(B,cntsb): f.write('%15s %7d\n'%(a,b))
 if collect_internals:
     C,cntsc = np.unique(intlst, return_counts=True)
-    with open("internal_counts.txt", 'w') as f:
+    with open(curdir+'input_data/ion_stats/'+"internal_counts.txt", 'w') as f:
         for a,b in zip(C,cntsc): f.write('%15s %7d\n'%(a,b))
 if collect_immoniums:
     D,cntsd = np.unique(immlst, return_counts=True)
-    with open("immonium_counts.txt", 'w') as f:
+    with open(curdir+'input_data/ion_stats/'+"immonium_counts.txt", 'w') as f:
         for a,b in zip(D,cntsd): f.write('%15s %7d\n'%(a,b))
 if collect_tmt:
     E,cntse = np.unique(tmtlst, return_counts=True)
-    with open("tmt_counts.txt", 'w') as f:
+    with open(curdir+'input_data/ion_stats/'+"tmt_counts.txt", 'w') as f:
         for a,b in zip(E,cntse): f.write('%15s %7d\n'%(a,b))
+if collect_others:
+    F,cntsf = np.unique(others, return_counts=True)
+    with open(curdir+'input_data/ion_stats/'+'other_counts.txt', 'w') as f:
+        for a,b in others.items(): f.write('%15s %7d\n'%(a,b))
 if write_stats:
     dic_counter[:,-1] = dic_counter[:,1] / np.maximum(dic_counter[:,0],1) # average intensity
     with open(curdir+'input_data/ion_stats/ion_stats.txt','w') as f:
