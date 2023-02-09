@@ -9,7 +9,7 @@ import os
 import numpy as np
 import torch
 import matplotlib.pyplot as plt
-path = 'C:/Users/jsl6/Documents/Python Scripts/Pytorch/SpecPred/prosit/AIData8/'
+path = "./"
 rawdatapath = 'C:/Users/jsl6/MyDatasets/MassSpec/'
 
 class DicObj:
@@ -17,7 +17,8 @@ class DicObj:
                  seq_len = 40,
                  chlim = [1,8],
                  criteria=['occurs>0'],
-                 massdir="./input_data/"
+                 massdir="input_data/",
+                 statsdir="input_data/ion_stats/"
                  ):
         self.seq_len = seq_len
         self.chlim = chlim
@@ -32,7 +33,7 @@ class DicObj:
         
         if 'masses.txt' in os.listdir(massdir):
             self.mass = {line.split()[0]:float(line.split()[1]) for line in 
-                          open(path+"input_data/masses.txt",'r')}
+                          open(massdir+"masses.txt",'r')}
         else:
             # proteomicsresource.washington.edu/protocols06/masses.php
             # www.unimod.org/login.php?a=logout
@@ -80,7 +81,7 @@ class DicObj:
             }
         
         self.dictionary = {}
-        self.make_dictionary(criteria)
+        self.make_dictionary(criteria, fn=statsdir+'ion_stats_train.txt')
         
         self.seq_channels = len(self.dic) + len(self.mdic)
         self.channels = len(self.dic) + len(self.mdic) + self.chrng + 1
@@ -93,7 +94,7 @@ class DicObj:
         
     def make_dictionary(self, 
                         criteria=['occurs>0'], 
-                        fn=path+"input_data/ion_stats/ion_stats_train.txt"):
+                        fn="input_data/ion_stats/ion_stats_train.txt"):
         """
         Create an ion dictionary and store it in member variables 
         self.dictionary, self.revdictionary. Needs to read an ion statistics
@@ -609,7 +610,13 @@ class LoadObj:
         return labels
 
 class EvalObj(LoadObj):
-    def __init__(self, model_list, dobj, enable_gpu=False):
+    def __init__(self, 
+                 model_list, 
+                 dobj, 
+                 enable_gpu=False,
+                 curpath='./',
+                 rawdatapath='C:/Users/jsl6/MyDatasets/MassSpec/'
+                 ):
         self.model_list = model_list
         embed = model_list[0].CEembed
         super().__init__(dobj, embed)
@@ -639,29 +646,29 @@ class EvalObj(LoadObj):
         }
         # Positions of labels (Name:) in experimental msp files
         self.fpos = {
-            'valuniq': np.loadtxt(path+'input_data/msp_pos/valposrawuniq.txt'),
-            'valcom': np.loadtxt(path+'input_data/msp_pos/valposrawcom.txt'),
-            'valsim': np.loadtxt(path+'input_data/msp_pos/valposrawsim.txt'),
-            'test': np.loadtxt(path+'input_data/msp_pos/testposraw.txt'),
-            'mab': np.loadtxt(path+'input_data/msp_pos/mabposraw.txt'),
-            # 'consbest':np.loadtxt(path+'input_data/msp_pos/consbestposraw.txt'),
-            # 'consgood':np.loadtxt(path+'input_data/msp_pos/consgoodposraw.txt'),
-            # 'conssemi':np.loadtxt(path+'input_data/msp_pos/conssemiposraw.txt'),
-            'tmt': np.loadtxt(path+'input_data/msp_pos/tmtpos.txt')
+            'valuniq': np.loadtxt(curpath+'input_data/msp_pos/valposrawuniq.txt'),
+            'valcom': np.loadtxt(curpath+'input_data/msp_pos/valposrawcom.txt'),
+            'valsim': np.loadtxt(curpath+'input_data/msp_pos/valposrawsim.txt'),
+            'test': np.loadtxt(curpath+'input_data/msp_pos/testposraw.txt'),
+            'mab': np.loadtxt(curpath+'input_data/msp_pos/mabposraw.txt'),
+            # 'consbest':np.loadtxt(curpath+'input_data/msp_pos/consbestposraw.txt'),
+            # 'consgood':np.loadtxt(curpath+'input_data/msp_pos/consgoodposraw.txt'),
+            # 'conssemi':np.loadtxt(curpath+'input_data/msp_pos/conssemiposraw.txt'),
+            'tmt': np.loadtxt(curpath+'input_data/msp_pos/tmtpos.txt')
         }
         # Filenames of predicted msp files
         self.fnmspred = {
-            # 'valuniq': path+'predictions/prositplus/valuniq_prositplus.msp',
-            # 'consbest': path+'predictions/prositplus/consbest_prositplus.msp',
-            # 'consgood': path+'predictions/prositplus/consgood_prositplus.msp',
-            # 'conssemi': path+'predictions/prositplus/conssemi_prositplus.msp'
+            # 'valuniq': curpath+'predictions/prositplus/valuniq_prositplus.msp',
+            # 'consbest': curpath+'predictions/prositplus/consbest_prositplus.msp',
+            # 'consgood': curpath+'predictions/prositplus/consgood_prositplus.msp',
+            # 'conssemi': curpath+'predictions/prositplus/conssemi_prositplus.msp'
         }
         # Positions of labels (Name:) in predicted msp files
         self.fpospred = {
-            # 'valuniq': np.loadtxt(path+'./input_data/msp_pos/valuniqpospred.txt'),
-            # 'consbest':np.loadtxt(path+'input_data/msp_pos/consbestpospred.txt'),
-            # 'consgood':np.loadtxt(path+'input_data/msp_pos/consgoodpospred.txt'),
-            # 'conssemi':np.loadtxt(path+'input_data/msp_pos/conssemipospred.txt'),
+            # 'valuniq': np.loadtxt(curpath+'./input_data/msp_pos/valuniqpospred.txt'),
+            # 'consbest':np.loadtxt(curpath+'input_data/msp_pos/consbestpospred.txt'),
+            # 'consgood':np.loadtxt(curpath+'input_data/msp_pos/consgoodpospred.txt'),
+            # 'conssemi':np.loadtxt(curpath+'input_data/msp_pos/conssemipospred.txt'),
         }
         self.lab = {}
         
@@ -669,9 +676,9 @@ class EvalObj(LoadObj):
         self.diff = lambda theor, exp: exp[None] - theor[:,None]
         self.ionstats = {
             line.split()[0]:[int(line.split()[1]), float(line.split()[2])] 
-            for line in open(path+'input_data/ion_stats/ion_stats_train.txt', 'r')
+            for line in open(curpath+'input_data/ion_stats/ion_stats_train.txt', 'r')
         }
-        # proinds = np.loadtxt(path+'input_data/ion_stats/proinds.txt').astype('int')
+        # proinds = np.loadtxt(curpath+'input_data/ion_stats/proinds.txt').astype('int')
         # self.prosit_filter = np.zeros(len(dobj.dictionary), dtype='int') 
         # self.prosit_filter[proinds]=1
     
