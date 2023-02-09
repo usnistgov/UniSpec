@@ -155,8 +155,10 @@ Files = (
          )))
 
 if write:
-    g = open(curdir+"dataset.txt", 'w')
-    h = open(curdir+"fpos.txt", 'w')
+    if not os.path.exists(curdir+'input_data/datasets/'): os.makedirs(curdir+'input_data/datasets/')
+    g = open(curdir+"input_data/datasets/dataset.txt", 'w')
+    if not os.path.exists(curdir+'input_data/txt_pos/'): os.makedirs(curdir+'input_data/txt_pos/')
+    h = open(curdir+"input_data/txt_pos/fpos.txt", 'w')
 neutlst=[];modlst=[];intlst=[];immlst=[];labels=[];tmtlst=[]
 LENGTHS = [];CHARGES = [];ENERGIES = [];others={}
 dic_counter = np.zeros((len(dictionary),3))
@@ -284,32 +286,33 @@ for file in Files:
 ###############################################################################
 
 if collect_labels and (write|write_stats):
+    if not os.path.exists(curdir+'input_data/labels/'): os.makedirs(curdir+'input_data/labels')
     with open(curdir+'input_data/labels/'+"labels.txt",'w') as f:
         f.write("\n".join(labels))
 if collect_neutrals:
     A,cntsa = np.unique(neutlst, return_counts=True)
     with open(curdir+'input_data/ion_stats/'+"neutral_counts.txt", 'w') as f:
-        for a,b in zip(A,cntsa): f.write('%15s %7d\n'%(a,b))
+        for a,b in zip(A,cntsa): f.write('%s %d\n'%(a,b))
 if collect_modifications:
     B,cntsb = np.unique(modlst, return_counts=True)
     with open(curdir+'input_data/ion_stats/'+"modification_counts.txt", 'w') as f:
-        for a,b in zip(B,cntsb): f.write('%15s %7d\n'%(a,b))
+        for a,b in zip(B,cntsb): f.write('%s %d\n'%(a,b))
 if collect_internals:
     C,cntsc = np.unique(intlst, return_counts=True)
     with open(curdir+'input_data/ion_stats/'+"internal_counts.txt", 'w') as f:
-        for a,b in zip(C,cntsc): f.write('%15s %7d\n'%(a,b))
+        for a,b in zip(C,cntsc): f.write('%s %d\n'%(a,b))
 if collect_immoniums:
     D,cntsd = np.unique(immlst, return_counts=True)
     with open(curdir+'input_data/ion_stats/'+"immonium_counts.txt", 'w') as f:
-        for a,b in zip(D,cntsd): f.write('%15s %7d\n'%(a,b))
+        for a,b in zip(D,cntsd): f.write('%s %d\n'%(a,b))
 if collect_tmt:
     E,cntse = np.unique(tmtlst, return_counts=True)
     with open(curdir+'input_data/ion_stats/'+"tmt_counts.txt", 'w') as f:
-        for a,b in zip(E,cntse): f.write('%15s %7d\n'%(a,b))
+        for a,b in zip(E,cntse): f.write('%s %d\n'%(a,b))
 if collect_others:
     F,cntsf = np.unique(others, return_counts=True)
     with open(curdir+'input_data/ion_stats/'+'other_counts.txt', 'w') as f:
-        for a,b in others.items(): f.write('%15s %7d\n'%(a,b))
+        for a,b in others.items(): f.write('%s %d\n'%(a,b))
 if write_stats:
     dic_counter[:,-1] = dic_counter[:,1] / np.maximum(dic_counter[:,0],1) # average intensity
     with open(curdir+'input_data/ion_stats/ion_stats.txt','w') as f:
