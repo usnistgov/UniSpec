@@ -1,9 +1,0 @@
-         Acetyl    1161
-            CAM  160374
-Carbamidomethyl  328879
-  Gln->pyro-Glu   19915
-  Glu->pyro-Glu    6670
-      Oxidation  282592
-        Phospho   57632
-Pyro-carbamidomethyl    3521
-       TMT6plex  972879
