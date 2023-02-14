@@ -14,24 +14,31 @@ class DicObj:
     def __init__(self,
                  seq_len = 40,
                  chlim = [1,8],
-                 criteria=['occurs>0'],
-                 massdir="input_data/",
-                 statsdir='input_data/ion_stats/'
+                 criteria_path='criteria.txt',
+                 mass_path="masses.txt",
+                 stats_path='ion_stats_train.txt',
+                 mod_path='modifications.txt'
                  ):
         self.seq_len = seq_len
         self.chlim = chlim
         self.chrng = chlim[-1]-chlim[0]+1
         self.dic = {b:a for a,b in enumerate('ARNDCQEGHILKMFPSTWYVX')}
         self.revdic = {b:a for a,b in self.dic.items()}
-        self.mdic = {b:a+len(self.dic) for a,b in enumerate([
-            '','Acetyl', 'Carbamidomethyl', 'Gln->pyro-Glu', 'TMT6plex',
-            'Glu->pyro-Glu', 'Oxidation', 'Phospho', 'Pyro-carbamidomethyl'])
-        }
+        if os.path.exists(mod_path):
+            self.mdic = {
+                b:a+len(self.dic) 
+                for a,b in enumerate(['']+open(mod_path).read().split("\n"))
+            }
+        else:
+            self.mdic = {b:a+len(self.dic) for a,b in enumerate([
+                '','Acetyl', 'Carbamidomethyl', 'Gln->pyro-Glu', 'Glu->pyro-Glu', 
+                'Oxidation', 'Phospho', 'Pyro-carbamidomethyl', 'TMT6plex'])
+            }
         self.revmdic = {b:a for a,b in self.mdic.items()}
         
-        if 'masses.txt' in os.listdir(massdir):
+        if os.path.exists(mass_path):
             self.mass = {line.split()[0]:float(line.split()[1]) for line in 
-                          open(massdir+"masses.txt",'r')}
+                          open(mass_path,'r')}
         else:
             # proteomicsresource.washington.edu/protocols06/masses.php
             # www.unimod.org/login.php?a=logout
@@ -79,16 +86,28 @@ class DicObj:
             }
         
         self.dictionary = {}
-        self.make_dictionary(criteria, fn=statsdir+'ion_stats_train.txt')
+        criteria = (
+            open(criteria_path,"r").read().split("\n") 
+            if os.path.exists(criteria_path) else ['occurs>0']
+        )
+        self.make_dictionary(criteria, fn=stats_path)
         
         self.seq_channels = len(self.dic) + len(self.mdic)
         self.channels = len(self.dic) + len(self.mdic) + self.chrng + 1
         
         # Synonyms
-        self.mdic['CAM'] = self.mdic['Carbamidomethyl']
-        self.mdic['TMT'] = self.mdic['TMT6plex']
-        self.revmdic[self.mdic['CAM']] = 'CAM'
-        self.revmdic[self.mdic['TMT']] = 'TMT'
+        if 'Carbamidomethyl' in self.mdic.keys():
+            self.mdic['CAM'] = self.mdic['Carbamidomethyl']
+            self.revmdic[self.mdic['CAM']] = 'CAM'
+        elif 'CAM' in self.mdic.keys():
+            self.mdic['Carbamidomethyl'] = self.mdic['CAM']
+            self.revmdic[self.mdic['Carbamidomethyl']] = 'Carbamidomethyl'
+        if 'TMT6plex' in self.mdic.keys():
+            self.mdic['TMT'] = self.mdic['TMT6plex']
+            self.revmdic[self.mdic['TMT']] = 'TMT'
+        elif 'TMT' in self.mdic.keys():
+            self.mdic['TMT6plex'] = self.mdic['TMT']
+            self.revmdic[self.mdic['TMT6plex']] = self.mdic['TMT6plex']
         
     def make_dictionary(self, 
                         criteria=['occurs>0'], 
@@ -609,6 +628,7 @@ class LoadObj:
 
 class EvalObj(LoadObj):
     def __init__(self, 
+                 config,
                  model_list, 
                  dobj, 
                  enable_gpu=False,
@@ -631,43 +651,10 @@ class EvalObj(LoadObj):
         self.AM = model_list[0]
         
         # Filenames of experimental msp files
-        self.fnms = {
-            'valuniq':rawdatapath+'AIData/Validation/ValidUniq2022418_2023J1_edit.msp',
-            'valcom':rawdatapath+'AIData/Validation/ValidCom2022418_edit.msp',
-            'valsim':rawdatapath+'AIData/Validation/ValidSim2022418_edit.msp',
-            'test':rawdatapath+'AIData/Testing/TestUniq202277_2023J1_edit.msp',
-            'mab':'C:/Users/jsl6/Documents/Paper3/testsetcur/NISTmAb20190711_Libtest_20221021.msp',
-            'consbest':rawdatapath+'Consensus/Training/HmConsBest20210524.msp',
-            'consgood':rawdatapath+'Consensus/Training/HmConsGood20210525.msp',
-            'conssemi':rawdatapath+'Consensus/Training/HmConsSemi20210525.msp',
-            'tmt':rawdatapath+'TMT/Validation/mouse_tmt_selected.msp'
-        }
-        # Positions of labels (Name:) in experimental msp files
-        self.fpos = {
-            'valuniq': np.loadtxt(curpath+'input_data/msp_pos/valposrawuniq.txt'),
-            'valcom': np.loadtxt(curpath+'input_data/msp_pos/valposrawcom.txt'),
-            'valsim': np.loadtxt(curpath+'input_data/msp_pos/valposrawsim.txt'),
-            'test': np.loadtxt(curpath+'input_data/msp_pos/testposraw.txt'),
-            'mab': np.loadtxt(curpath+'input_data/msp_pos/mabposraw.txt'),
-            # 'consbest':np.loadtxt(path+'input_data/msp_pos/consbestposraw.txt'),
-            # 'consgood':np.loadtxt(path+'input_data/msp_pos/consgoodposraw.txt'),
-            # 'conssemi':np.loadtxt(path+'input_data/msp_pos/conssemiposraw.txt'),
-            'tmt': np.loadtxt(curpath+'input_data/msp_pos/tmtpos.txt')
-        }
+        self.dsets = config['dsets']
         # Filenames of predicted msp files
-        self.fnmspred = {
-            # 'valuniq': path+'predictions/prositplus/valuniq_prositplus.msp',
-            # 'consbest': path+'predictions/prositplus/consbest_prositplus.msp',
-            # 'consgood': path+'predictions/prositplus/consgood_prositplus.msp',
-            # 'conssemi': path+'predictions/prositplus/conssemi_prositplus.msp'
-        }
-        # Positions of labels (Name:) in predicted msp files
-        self.fpospred = {
-            # 'valuniq': np.loadtxt(path+'./input_data/msp_pos/valuniqpospred.txt'),
-            # 'consbest':np.loadtxt(path+'input_data/msp_pos/consbestpospred.txt'),
-            # 'consgood':np.loadtxt(path+'input_data/msp_pos/consgoodpospred.txt'),
-            # 'conssemi':np.loadtxt(path+'input_data/msp_pos/conssemipospred.txt'),
-        }
+        self.dsetspred = {}
+        # Labels
         self.lab = {}
         
         self.ppm = lambda theor, exp: 1e6*(exp[None] - theor[:,None])/theor[:,None]
@@ -688,7 +675,7 @@ class EvalObj(LoadObj):
         """
         self.lab[dset] = {
             lab:I for I, lab in enumerate(
-                self.Pos2labels(self.fnms[dset], self.fpos[dset]))
+                self.Pos2labels(self.dsets[dset]['msp'], self.dsets[dset]['pos']))
         }
     
     def add_prosit(self):
@@ -1120,8 +1107,8 @@ class EvalObj(LoadObj):
         :return label: spectrum label
         :return specdata: tuple of spectrum (masses, abundances, annotations)
         """
-        fnm = self.fnmspred[dset] if typ=='pred' else self.fnms[dset]
-        pos = self.fpospred[dset] if typ=='pred' else self.fpos[dset]
+        fnm = self.dsetspred[dset]['msp'] if typ=='pred' else self.dsets[dset]['msp']
+        pos = self.dsetspred[dset]['pos'] if typ=='pred' else self.dsets[dset]['pos']
         with open(fnm, 'r') as fp:
             label, specdata = self.inp_spec_msp(pos[index], fp)
         return label, specdata
@@ -1276,16 +1263,19 @@ class EvalObj(LoadObj):
                 )
                 
         elif type(inp)==str:
-            assert inp in self.fnms.keys(), "inp not in fnms.keys()"
-            if inp not in self.fpos.keys():
-                self.FPs(self.fnms[inp], 
-                         '(len(seq)<self.D.seq_len)&(charge<self.D.chlim[-1])'
+            assert inp in self.dsets.keys(), "inp not in dsets.keys()"
+            if self.dsets[inp]['pos']=='None':
+                print("Searching for file positions in %s"%inp)
+                Pos = self.FPs(
+                    self.dsets[inp]['msp'], 
+                    '(len(seq)<self.D.seq_len)&(charge<self.D.chlim[-1])'
                 )
-            dset = inp
+            else:
+                Pos = np.loadtxt(self.dsets[inp]['pos'])
             # Get data on raw spectra
             # - cecorr adds to the label in inp_spec_msp
-            with open(self.fnms[dset], 'r') as fp:
-                out = [self.inp_spec_msp(pos, fp) for pos in self.fpos[dset]]
+            with open(self.dsets[inp]['msp'], 'r') as fp:
+                out = [self.inp_spec_msp(pos, fp) for pos in Pos]
             labels = [o[0] for o in out]
             rawdata = [o[1] for o in out]
             comment = [];Specdata = [];Specinfo = [];CS=0
@@ -1352,9 +1342,10 @@ class EvalObj(LoadObj):
         # self.model.to("cpu")
         
         # Get raw data
-        with open(self.fnms[rawdset], 'r') as g:
+        with open(self.dsets[rawdset]['msp'], 'r') as g:
+            Pos = np.loadtxt(self.dsets[rawdset]['pos'])
             label, (rawmz,rawab,rawion) = self.inp_spec_msp(
-                self.fpos[rawdset][index], g
+                Pos[index], g
             )
             label = self.add_ce(label, cecorr)
             if maxraw != None:

@@ -1,20 +1,12 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Wed Jul  6 13:15:26 2022
-
-@author: jsl6
-"""
-ROOT_INT = 2
-EMBED = False
-CONFIG = None
-WEIGHTS = None
-RESTART = None
-TRANSFER = False
-LR = 3e-4
+config = {line.split('=')[0]:line.split('=')[1] for line in 
+          open('./input_data/configuration/Train.config').read().split('\n')
+}
+CONFIG = eval(config['config'])
 
 import numpy as np
 import sys
 import os
+import yaml
 from time import time
 import torch
 from models import FlipyFlopy
@@ -22,38 +14,44 @@ import matplotlib.pyplot as plt
 plt.close('all')
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
+with open("./input_data/configuration/Train.yaml", 'r') as stream:
+    config = yaml.safe_load(stream)
+
 ###############################################################################
 ############################## Dictionaries ###################################
 ###############################################################################
 
+with open("./input_data/configuration/dic.yaml", 'r') as stream:
+    dconfig = yaml.safe_load(stream)
+
 from utils import DicObj
-criteria = open("input_data/ion_stats/criteria.txt","r").read().split("\n")
-D = DicObj(criteria=criteria)
+D = DicObj(**dconfig)
 
 ###############################################################################
 ################################ Dataset ######################################
 ###############################################################################
 
 from utils import LoadObj
-L = LoadObj(D, embed=EMBED)
+L = LoadObj(D, embed=config['model_config']['CEembed'])
 
-fpostr = np.loadtxt('input_data/txt_pos/fpostrain.txt')
-ftr = open("input_data/datasets/train.txt", "r")
-
-# intorch = L.input_from_file(fpostr, ftr)
+# Training
+fpostr = np.loadtxt(config['train']['pos']).astype(int)
+ftr = open(config['train']['data'], "r")
 trlab = np.array([line.strip() for line in 
-                  open('input_data/labels/training_labels.txt','r')])
+                  open(config['train']['labels'],'r')])
 
 # validation
+fposval = np.loadtxt(config['val']['pos']).astype(int)
+val_point = open(config['val']['data'], "r")
 vallab = np.array([line.strip() for line in 
-                  open('input_data/labels/validation_labels.txt','r')])
-fposval = np.loadtxt('input_data/txt_pos/fposval.txt')
-val_point = open("input_data/datasets/val.txt", "r")
+                  open(config['val']['labels'],'r')])
+
 # testing
+fposte = np.loadtxt(config['test']['pos']).astype(int)
+test_point = open(config['test']['data'], "r")
 telab = np.array([line.strip() for line in 
-                  open('input_data/labels/testing_labels.txt','r')])
-fposte = np.loadtxt('input_data/txt_pos/fpostest.txt')
-test_point = open("input_data/datasets/test.txt", "r")
+                  open(config['test']['labels'],'r')])
+
 # find long sequence for mirrorplot
 Lens = []
 for pos in fposte:
@@ -66,41 +64,38 @@ MPIND = np.argmax(Lens)
 ###############################################################################
 
 arrdims=21
-Blocks=9
 
 # Configuration dictionary
-if CONFIG != None:
+if config['config'] != False:
     # Load config
     model_config = {
         line.split("\t")[0]:eval(line.split("\t")[1]) 
         for line in open(CONFIG,"r")
     }
 else:
+    channels = D.seq_channels if config['model_config']['CEembed'] else D.channels
     model_config = {
-        'in_ch': D.channels,#seq_channels,
+        'in_ch': channels,
         'seq_len': D.seq_len,
         'out_dim': len(D.dictionary),
-        'embedsz': 256,
-        'blocks': Blocks,
-        'head': (16,16,64),
-        'units': None,
-        'filtlast': 512,
-        'mask': False,
-        'CEembed': EMBED,
+        **config['model_config']
     }
-with open("./saved_models/config.tsv", 'w') as g:
-    for a,b in model_config.items(): g.write("%s\t%s\n"%(a,b))
+if not os.path.exists('./saved_models'): os.makedirs('./saved_models/')
+with open("saved_models/model_config.yaml","w") as file:
+    yaml.dump(model_config, file)
+# with open("./saved_models/config.tsv", 'w') as g:
+#     for a,b in model_config.items(): g.write("%s\t%s\n"%(a,b))
 
 # Instantiate model
 model = FlipyFlopy(**model_config, device=device)
 model.to(device)
 
 # Load weights
-if WEIGHTS != None:
-    model.load_state_dict(torch.load(WEIGHTS))
+if config['weights'] != False:
+    model.load_state_dict(torch.load(config['weights']))
 
 # TRANSFER LEARNING
-if TRANSFER:
+if config['transfer'] != False:
     model.final = torch.nn.Sequential(torch.nn.Linear(512,D.dicsz), torch.nn.Sigmoid())
     for parm in model.parameters(): parm.requires_grad=False
     for parm in model.final.parameters(): parm.requires_grad=True
@@ -109,17 +104,17 @@ sys.stdout.write("Total model parameters: ")
 model.total_params()
 
 # Optimizer
-opt = torch.optim.Adam(model.parameters(), LR)
-if RESTART != None:
+opt = torch.optim.Adam(model.parameters(), eval(config['lr']))
+if config['restart'] != False:
     # loading optimizer state requires it to be initialized with model GPU parms
-    opt.load_state_dict(torch.load(RESTART, map_location=device))
+    opt.load_state_dict(torch.load(config['restart'], map_location=device))
 
 ###############################################################################
 ########################### Loss function #####################################
 ###############################################################################
 
 CS = torch.nn.CosineSimilarity(dim=-1)
-def LossFunc(targ, pred, root=ROOT_INT):
+def LossFunc(targ, pred, root=config['root_int']):
     targ = L.root_intensity(targ, root=root) if root!=False else targ
     pred = L.root_intensity(pred, root=root) if root!=False else pred
     cs = CS(targ, pred)
@@ -139,7 +134,7 @@ def train_step(samples, targ):
     model.zero_grad()
     out,_,_ = model(samplesgpu, test=False)
     
-    loss = LossFunc(targgpu, out, root=ROOT_INT)
+    loss = LossFunc(targgpu, out, root=config['root_int'])
     loss = loss.mean()
     loss.backward()
     opt.step()
@@ -152,7 +147,7 @@ def Testing(labels, pos, pointer, batch_size):
         steps = (tot//batch_size) if tot%batch_size==0 else (tot//batch_size)+1
         model.to(device)
         Loss = 0
-        arr = torch.zeros(Blocks, arrdims)
+        arr = torch.zeros(config['model_config']['blocks'], arrdims)
         for m in range(steps):
             begin = m*batch_size
             end = (m+1)*batch_size
@@ -230,9 +225,9 @@ def train(epochs,
         # with open("C:/Users/jsl6/Desktop/lossintime.txt", "a") as f:
         #     f.write(" ".join([str(q) for q in trainintime]))
         #     f.write(" ")
-        with open('C:/Users/jsl6/Desktop/actarr.txt','a') as f:
+        with open('./saved_models/actarr.txt','a') as f:
             f.write("".join(['%9d'%m for m in np.arange(arrdims)])+'\n')
-            for m in range(Blocks): 
+            for m in range(config['model_config']['blocks']): 
                 f.write("".join(['%9.5f'%a for a in tarr[m]])+'\n')    
         mirrorplot(MPIND, epoch=i, maxnorm=True)
         
@@ -249,11 +244,11 @@ def train(epochs,
                 torch.save(model.state_dict(), 
                             "saved_models/ckpt_epoch%d_%.4f"%(i,-val_loss)
                 )
-        elif (svwts=='all') | (svwts==True):
+        elif (svwts=='all') | (svwts=='True'):
             torch.save(model.state_dict(), 
                         "saved_models/ckpt_epoch%d_%.4f"%(i,-val_loss)
             )
-            torch.save(opt.state_dict(), "saved_models/opt.sd")
+        torch.save(opt.state_dict(), "saved_models/opt.sd")
         
         # Print out results
         sys.stdout.write(
@@ -318,7 +313,13 @@ def mirrorplot(iloc=0, epoch=0, maxnorm=True, save=True):
     )
     
     if save:
-        fig.savefig("C:/Users/jsl6/Desktop/mirroplot%d_%d.jpg"%(iloc,epoch))
+        fig.savefig("./saved_models/mirroplot%d_%d.jpg"%(iloc,epoch))
         plt.close()
 
-train(25, 100, lr_decay_start=12, lr_decay_rate=0.8, svwts='top')
+train(
+      config['epochs'], 
+      batch_size=config['batch_size'], 
+      lr_decay_start=config['lr_decay_start'], 
+      lr_decay_rate=config['lr_decay_rate'], 
+      svwts=config['svwts']
+)

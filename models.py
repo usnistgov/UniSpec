@@ -319,7 +319,7 @@ class FlipyFlopy(nn.Module):
 
         """
         super(FlipyFlopy, self).__init__()
-        units = embedsz if units==None else units
+        units = embedsz if eval(units)==None else units
         
         self.mask = mask
         self.dev=device
@@ -349,7 +349,7 @@ class FlipyFlopy(nn.Module):
             self.denseCH = nn.Linear(self.cesz, self.cesz)
             self.denseCE = nn.Linear(self.cesz, self.cesz)
         
-        head = (embedsz,)+head+(None,None,drop,None)
+        head = (embedsz,)+tuple(head)+(None,None,drop,None)
         self.main = nn.ModuleList([
             TransBlock(head, (embedsz, units, ffnembed, drop)) 
             for _ in range(blocks)]
