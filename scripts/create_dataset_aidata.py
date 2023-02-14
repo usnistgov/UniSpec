@@ -16,56 +16,42 @@ write_stats = False
 combo = False
 collect_labels = True
 """
-files                ='train'
-write                =False
-write_stats          =False
-mode                 ='True' #'ann in dictionary.keys()' or 'True'
-combo                =True
-collect_neutrals     =True
-collect_internals    =True
-collect_immoniums    =True
-collect_modifications=True
-collect_tmt          =True
-collect_labels       =False
-collect_others       =False
-curdir               ="C:/Users/joell/Documents/Python/NIST/Paper3/Prosit+/Predire/"
-itpath               ="input_options/ion_types.txt"
-nlpath               ="input_options/neutral_losses.txt"
-lcipath              ='input_options/length_charge_iso.txt'
-trfpath              ='input_options/train_files.txt'
-valfpath             ='input_options/val_files.txt'
-tefpath              ='input_options/test_files.txt'
-pepcrit              ='input_options/peptide_criteria.txt'
-modpath              ='input_options/modifications.txt'
 import numpy as np 
 import sys
 import os
 import re
+import yaml
 from time import time
-sys.path.append(curdir)
-pep = {line.split()[0]:int(line.split()[1]) for line in open(pepcrit, 'r')}
-pep['modifications'] = open(modpath,'r').read().split("\n")
 
+with open('./input_options/create_dataset.yaml','r') as stream:
+    config = yaml.safe_load(stream)
+
+with open("./input_options/peptide_criteria.yaml",'r') as stream:
+    pep = yaml.safe_load(stream)
+
+curdir = config['curdir']
+sys.path.append(config['curdir'])
 ###############################################################################
 ############################### Ion dictionary ################################
 ###############################################################################
 
+with open("./input_options/combo.yaml", 'r') as stream:
+    combcon = yaml.safe_load(stream)
+
 # ion types
-it = {b:a for a,b in enumerate(open(itpath,'r').read().split("\n"))}
+it = {b:a for a,b in enumerate(combcon['ion_types'])}
 # neutrals plus null
-neut = {b:a for a,b in enumerate(['']+open(nlpath,'r').read().split("\n"))}
-# length, charge, isotope parameters
-lci = {line.split()[0]:int(line.split()[1]) for line in open(lcipath,'r')}
+neut = {b:a for a,b in enumerate(['']+combcon['neutral_losses'])}
 # Fragment lengths
-mer = np.arange(1,lci['max_length'],1)
+mer = np.arange(1, combcon['max_fragment_length']+1, 1)
 # Fragment charges
-chars = ['']+['^'+str(i) for i in np.arange(1,lci['max_charge']+1,1)]
+chars = ['']+['^'+str(i) for i in np.arange(1, combcon['max_fragment_charge']+1, 1)]
 # Isotopic peaks
 isotopes = ['']+['i' if i==1 else str(i)+'i' 
-                 for i in np.arange(1,lci['max_isotope']+1,1)
+                 for i in np.arange(1, combcon['max_isotope']+1, 1)
                 ]
 # Create a dictionary for target indices
-if combo:
+if config['combo']:
     f = open(curdir+'input_data/ion_stats/'+"combo_dictionary.txt", "w")
     dictionary={}
     count=0
@@ -83,9 +69,10 @@ if combo:
                         Cut down on permuations by adding limiting criteria
                         here.
                         """
-                        # a-ions have no losses
+                        # a-ions only have Qian's phospho losses
                         if (ityp=='a') & (ni!=''):
-                            continue
+                            if ('PO' not in ni):
+                                continue
                         # p-ions have no extent
                         if (ityp=='p') and (int(p)!=1):
                             continue
@@ -128,7 +115,7 @@ if combo:
                         count+=1
     f.close()
     # add internals
-    if not collect_internals:
+    if not config['collect_internals']:
         for i,line in enumerate(open(curdir+"input_data/ion_stats/internal_counts.txt","r")):
             if int(line.split()[1])>0: dictionary[line.split()[0]] = len(dictionary)
 else:
@@ -145,21 +132,17 @@ revdictionary = {n:m for m,n in dictionary.items()}
 ############################# Main part of script #############################
 ###############################################################################
 
-train_files = open(trfpath,'r').read().split("\n")
-test_files = open(tefpath,'r').read().split("\n")
-val_files = open(valfpath,'r').read().split("\n")
-all_files = test_files+val_files+train_files
 Files = (
-         train_files if files=='train' else (
-         val_files if files=='val' else (
-         test_files if files=='test' else sys.exit('Choose either train/val/test')
+         config['train_files'] if config['files']=='train' else (
+         config['val_files'] if config['files']=='val' else (
+         config['test_files'] if config['files']=='test' else sys.exit('Choose either train/val/test')
          )))
 
-if write:
+if config['write']:
     if not os.path.exists(curdir+'input_data/datasets/'): os.makedirs(curdir+'input_data/datasets/')
-    g = open(curdir+"input_data/datasets/dataset.txt", 'w')
+    g = open(curdir+"input_data/datasets/%s.txt"%config['files'], 'w')
     if not os.path.exists(curdir+'input_data/txt_pos/'): os.makedirs(curdir+'input_data/txt_pos/')
-    h = open(curdir+"input_data/txt_pos/fpos.txt", 'w')
+    h = open(curdir+"input_data/txt_pos/fpos%s.txt"%config['files'], 'w')
 neutlst=[];modlst=[];intlst=[];immlst=[];labels=[];tmtlst=[]
 LENGTHS = [];CHARGES = [];ENERGIES = [];others={}
 dic_counter = np.zeros((len(dictionary),3))
@@ -194,7 +177,7 @@ for file in Files:
                     [pos,aa,typ] = [int(mod[0]),mod[1],mod[2]]
                     seqInt[int(mod[0])] = seqInt[int(mod[0])].lower()
                     mod_types.append(typ)
-                    if collect_modifications: modlst.append(typ)
+                    if config['collect_modifications']: modlst.append(typ)
                 seqInt = "".join(seqInt)
                 # print("\r\033[K%s"%seqInt.strip(), end='')
                 
@@ -224,10 +207,10 @@ for file in Files:
                             )
                         if ann[-3:]=='ppm': ann = ann.split('/')[0] # get regular annotation
                         # DIC is a dictionary, ion->[mz,ab], for the current spectrum
-                        if eval(mode):#ann in dictionary.keys():# or ann[:3]=='Int':
-                            if collect_internals and ann[:3]=='Int': 
+                        if eval(config['mode']):#ann in dictionary.keys():# or ann[:3]=='Int':
+                            if config['collect_internals'] and ann[:3]=='Int': 
                                 intlst.append(ann)
-                            elif collect_neutrals:
+                            elif config['collect_neutrals']:
                                 hold = ann # ion-neutral
                                 if '^' in hold:
                                     hold = hold.split('^')[0] # ion-neutral
@@ -240,15 +223,15 @@ for file in Files:
                                     # TMT+H
                                 elif 'TMT+H' in ann:
                                     neutlst.append('H')
-                            if collect_immoniums:
+                            if config['collect_immoniums']:
                                 if ann[0]=='I' and ann[:3]!='Int':
                                     immlst.append(ann.split('+')[0])
-                            if collect_tmt:
+                            if config['collect_tmt']:
                                 if ann[:3]=='TMT':
                                     tmtlst.append(ann.split('+')[0])
-                            if write | write_stats:
+                            if config['write'] | config['write_stats']:
                                 DIC[ann] = [float(mz), float(ab)]
-                        elif collect_others:
+                        elif config['collect_others']:
                             if ann in others.keys():
                                 others[ann] += 1
                             else:
@@ -256,7 +239,7 @@ for file in Files:
                         
                 # Write a streamlined dataset
                 # - if statements limit the types of peptides I use
-                if write | write_stats:
+                if config['write'] | config['write_stats']:
                     mx = np.max(Ints) # intensities scaled between 0-1
                     modbool = [True if i in pep['modifications'] else False 
                                for i in mod_types]
@@ -270,14 +253,14 @@ for file in Files:
                         (False not in modbool)
                     ):
                         labels.append(label.strip())
-                        if write: h.write("%d "%g.tell())
-                        if write: g.write("NAME: %s|%s|%d|%.1f|%d\n"%(
+                        if config['write']: h.write("%d "%g.tell())
+                        if config['write']: g.write("NAME: %s|%s|%d|%.1f|%d\n"%(
                                 seq,Mods,charge,ce,len(DIC)))
                         for a,b in DIC.items():
-                            if write: g.write('%s %d %.4f %.4f\n'%(
+                            if config['write']: g.write('%s %d %.4f %.4f\n'%(
                                     a,dictionary[a],b[0],b[1]/mx
                                     ))
-                            if write_stats:
+                            if config['write_stats']:
                                 dic_counter[dictionary[a],0] += 1 # counts
                                 dic_counter[dictionary[a],1] += b[1]/mx # sum intensity
         print('\r\033[K%d s'%(time()-startclock))
@@ -285,46 +268,47 @@ for file in Files:
 ###############################################################################
 ############################# Writing to file #################################
 ###############################################################################
+if not os.path.exists(curdir+'input_data/ion_stats/'): os.makedirs(curdir+'input_data/ion_stats')
 
-if collect_labels and (write|write_stats):
+if config['collect_labels'] and (config['write']|config['write_stats']):
     if not os.path.exists(curdir+'input_data/labels/'): os.makedirs(curdir+'input_data/labels')
-    with open(curdir+'input_data/labels/'+"labels.txt",'w') as f:
+    with open(curdir+'input_data/labels/'+"%s_labels.txt"%config['files'],'w') as f:
         f.write("\n".join(labels))
-if collect_neutrals:
+if config['collect_neutrals']:
     A,cntsa = np.unique(neutlst, return_counts=True)
     with open(curdir+'input_data/ion_stats/'+"neutral_counts.txt", 'w') as f:
         for a,b in zip(A,cntsa): f.write('%s %d\n'%(a,b))
-if collect_modifications:
+if config['collect_modifications']:
     B,cntsb = np.unique(modlst, return_counts=True)
     with open(curdir+'input_data/ion_stats/'+"modification_counts.txt", 'w') as f:
         for a,b in zip(B,cntsb): f.write('%s %d\n'%(a,b))
-if collect_internals:
+if config['collect_internals']:
     C,cntsc = np.unique(intlst, return_counts=True)
     with open(curdir+'input_data/ion_stats/'+"internal_counts.txt", 'w') as f:
         for a,b in zip(C,cntsc): f.write('%s %d\n'%(a,b))
-if collect_immoniums:
+if config['collect_immoniums']:
     D,cntsd = np.unique(immlst, return_counts=True)
     with open(curdir+'input_data/ion_stats/'+"immonium_counts.txt", 'w') as f:
         for a,b in zip(D,cntsd): f.write('%s %d\n'%(a,b))
-if collect_tmt:
+if config['collect_tmt']:
     E,cntse = np.unique(tmtlst, return_counts=True)
     with open(curdir+'input_data/ion_stats/'+"tmt_counts.txt", 'w') as f:
         for a,b in zip(E,cntse): f.write('%s %d\n'%(a,b))
-if collect_others:
+if config['collect_others']:
     F,cntsf = np.unique(others, return_counts=True)
     with open(curdir+'input_data/ion_stats/'+'other_counts.txt', 'w') as f:
         for a,b in others.items(): f.write('%s %d\n'%(a,b))
-if write_stats:
+if config['write_stats']:
     dic_counter[:,-1] = dic_counter[:,1] / np.maximum(dic_counter[:,0],1) # average intensity
-    with open(curdir+'input_data/ion_stats/ion_stats.txt','w') as f:
+    with open(curdir+'input_data/ion_stats/ion_stats_%s.txt'%config['files'],'w') as f:
         for a,b,c in zip(
                 dictionary.keys(),
                 dic_counter[:,0],
                 dic_counter[:,1] / np.maximum(dic_counter[:,0],1)
         ):
             f.write('%22s %8d %.4f\n'%(a,b,c))
-if write: g.close()
-if write: h.close()
+if config['write']: g.close()
+if config['write']: h.close()
 print("\n%d s"%(time()-Startclock))
 
 # import os
