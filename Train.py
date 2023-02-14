@@ -67,11 +67,9 @@ arrdims=21
 
 # Configuration dictionary
 if config['config'] != False:
-    # Load config
-    model_config = {
-        line.split("\t")[0]:eval(line.split("\t")[1]) 
-        for line in open(CONFIG,"r")
-    }
+    # Load model config
+    with open(config['config'], 'r') as stream:
+        model_config = yaml.safe_load(stream)
 else:
     channels = D.seq_channels if config['model_config']['CEembed'] else D.channels
     model_config = {
