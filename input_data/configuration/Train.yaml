@@ -1,0 +1,36 @@
+train:
+   labels: ./input_data/labels/train_labels.txt
+   pos: ./input_data/txt_pos/fpostrain.txt
+   data: ./input_data/datasets/train.txt
+val:
+   labels: ./input_data/labels/val_labels.txt
+   pos: ./input_data/txt_pos/fposval.txt
+   data: ./input_data/datasets/val.txt
+test:
+   labels: ./input_data/labels/test_labels.txt
+   pos: ./input_data/txt_pos/fpostest.txt
+   data: ./input_data/datasets/test.txt
+
+config: False
+weights: ./saved_models/ckpt_epoch16_0.9263
+restart: False
+transfer: False
+
+model_config:
+   embedsz: 256
+   blocks: 9
+   head:
+      - 16
+      - 16
+      - 64
+   units: None
+   filtlast: 512
+   CEembed: False
+
+root_int: 2
+lr: 3e-4
+epochs: 25
+batch_size: 100
+lr_decay_start: 12
+lr_decay_rate: 0.8
+svwts: False

@@ -1,0 +1,8 @@
+seq_len: 40
+chlim: 
+   - 1
+   - 8
+criteria_path: ./input_data/ion_stats/criteria.txt
+mass_path: ./input_data/masses.txt
+mod_path: ./input_data/ion_stats/modifications.txt
+stats_path: ./input_data/ion_stats/ion_stats_train.txt
