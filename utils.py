@@ -652,6 +652,8 @@ class EvalObj(LoadObj):
         
         # Filenames of experimental msp files
         self.dsets = config['dsets']
+        for key in self.dsets.keys():
+            self.add_posarray(key)
         # Filenames of predicted msp files
         self.dsetspred = {}
         # Labels
@@ -666,6 +668,12 @@ class EvalObj(LoadObj):
         # proinds = np.loadtxt(path+'input_data/ion_stats/proinds.txt').astype('int')
         # self.prosit_filter = np.zeros(len(dobj.dictionary), dtype='int') 
         # self.prosit_filter[proinds]=1
+    
+    def add_posarray(self, dset, pred=False):
+        if pred==False:
+            self.dsets[dset]['Pos'] = np.loadtxt(self.dsets[dset]['pos']).astype(int)
+        else:
+            self.dsetspred[dset]['Pos'] = np.loadtxt(self.dsetspred[dset]['pos']).astype(int)
     
     def add_labeldic(self, dset):
         """
@@ -1364,8 +1372,8 @@ class EvalObj(LoadObj):
                 assert pos!=-1, "Label not found."
             # use precalculated positions in predicted msp. Use e.g. mabps, valuniqps
             else: 
-                pos = self.fpospred[rawdset][index]
-            with open(self.fnmspred[rawdset],'r') as g:
+                pos = self.dsetspred[rawdset]['pos'][index]
+            with open(self.dsetspred[rawdset]['msp'],'r') as g:
                 label, (pmz,pab,pions) = self.inp_spec_msp(pos, g)
             [seq,other] = label.split('/')
             [charge,mods,ev,nce] = other.split('_')

@@ -1,8 +1,3 @@
-config = {line.split('=')[0]:line.split('=')[1] for line in 
-          open('./input_data/configuration/Train.config').read().split('\n')
-}
-CONFIG = eval(config['config'])
-
 import numpy as np
 import sys
 import os
@@ -78,11 +73,6 @@ else:
         'out_dim': len(D.dictionary),
         **config['model_config']
     }
-if not os.path.exists('./saved_models'): os.makedirs('./saved_models/')
-with open("saved_models/model_config.yaml","w") as file:
-    yaml.dump(model_config, file)
-# with open("./saved_models/config.tsv", 'w') as g:
-#     for a,b in model_config.items(): g.write("%s\t%s\n"%(a,b))
 
 # Instantiate model
 model = FlipyFlopy(**model_config, device=device)
@@ -106,6 +96,21 @@ opt = torch.optim.Adam(model.parameters(), eval(config['lr']))
 if config['restart'] != False:
     # loading optimizer state requires it to be initialized with model GPU parms
     opt.load_state_dict(torch.load(config['restart'], map_location=device))
+
+###############################################################################
+########################### Reproducability ###################################
+###############################################################################
+if not os.path.exists('./saved_models'): os.makedirs('./saved_models/')
+with open("saved_models/model_config.yaml","w") as file:
+    yaml.dump(model_config, file)
+with open("saved_models/dic.yaml","w") as file:
+    yaml.dump(dconfig, file)
+with open("saved_models/criteria.txt", 'w') as file:
+    file.write(open(dconfig['criteria_path']).read().split("\n"))
+with open("saved_models/modifications.txt", 'w') as file:
+    file.write(open(dconfig['mod_path']).read().split("\n"))
+with open("saved_models/ion_stats_train.txt", 'w') as file:
+    file.write(open(dconfig['stats_path']).read().split("\n"))
 
 ###############################################################################
 ########################### Loss function #####################################
@@ -248,11 +253,14 @@ def train(epochs,
             )
         torch.save(opt.state_dict(), "saved_models/opt.sd")
         
-        # Print out results
-        sys.stdout.write(
+        string = (
   "\rEpoch %d; Train loss: %.3f; Val loss: %6.3f; Test loss: %6.3f; %.1f s\n"%(
-            i, train_loss, -val_loss, -test_loss, time()-start_epoch)
+                  i, train_loss, -val_loss, -test_loss, time()-start_epoch)
         )
+        # Print out results
+        with open("./saved_models/losses.txt", 'a') as f:
+            f.write(string)
+        sys.stdout.write(string)
     model.to("cpu")
 
 def mirrorplot(iloc=0, epoch=0, maxnorm=True, save=True):
