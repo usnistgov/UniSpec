@@ -457,8 +457,9 @@ class FlipyFlopy(nn.Module):
         lst2 = []
         for layer in self.main:
             out, out2, FM = layer(out, embed, mask, test)
-            lst.append(out2)
-            lst2.append(FM)
+            if test:
+                lst.append(out2)
+                lst2.append(FM)
         out = torch.relu(self.ProjNorm(torch.einsum('abc,bd->adc', out, self.Proj))) # bs, filtlast, seq_len
         #lst.append(out)
         return self.final(out.transpose(-1,-2)).mean(dim=1), lst, lst2
