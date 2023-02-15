@@ -1,0 +1,23 @@
+criteria: input_data/ion_stats/criteria.txt
+dic_config: ./input_data/configuration/dic.yaml
+model_config: saved_models/config.tsv
+model_ckpt: saved_models/ckpt_epoch16_0.9263
+enable_gpu: True
+dsets:
+   valuniq: 
+      msp: C:/Users/joell/MyDatasets/MassSpec/AIData/Validation/ValidUniq2022418_edit.msp
+      pos: ./input_data/msp_pos/valuniq.pos
+dsetspred:
+   valuniq:
+      msp: ./predictions/out.msp
+      pos: None
+ 
+mode: write_msp
+write_msp:
+   new: True
+   label_path: ./predictions/valuniq.labels
+   dset: valuniq
+   comments_path: None
+   cecorr: 0
+   print_every: 100
+   outfn: "./temp/aout"
