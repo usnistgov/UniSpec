@@ -123,8 +123,11 @@ else:
     file here. This could be useful if I get rid of all the ion types that are
     absent from the combination of train/val/test sets."""
     from utils import DicObj
-    criteria = open(curdir+"input_data/ion_stats/criteria.txt","r").read().split("\n")
-    D = DicObj(criteria=criteria, massdir="../input_data/", statsdir='../input_data/ion_stats/')
+    with open(curdir+"./input_data/configuration/dic.yaml", 'r') as stream:
+        dconfig = yaml.safe_load(stream)
+    dconfig['criteria_path'] = curdir+'input_data/ion_stats/criteria.txt'
+    dconfig['stats_path'] = curdir+'input_data/ion_stats/ion_stats_train.txt'
+    D = DicObj(**dconfig)
     dictionary = D.dictionary
 revdictionary = {n:m for m,n in dictionary.items()}
 

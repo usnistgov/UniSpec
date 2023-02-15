@@ -77,38 +77,38 @@ ion_types:
    - TMT130N
    - TMT131
 neutral_losses:
-   - H2O
-   - H2O-NH3
-   - H2O+CO
-   - 2H2O
-   - NH3
-   - 2NH3
-   - 2CH3SOH-H2O
-   - 2CH3SOH-2H2O
-   - 3CH3SOH
-   - 3CH3SOH-H2O
-   - 3CH3SOH-2H2O
-   - C2H5NOS
    - 2C2H5NOS
+   - 2CH3SOH
+   - 2CH3SOH-2H2O
+   - 2CH3SOH-H2O
+   - 2H2O
+   - 2H3PO4
+   - 2H5PO5
+   - 2HPO3
+   - 2NH3
    - 3C2H5NOS
+   - 3CH3SOH
+   - 3CH3SOH-2H2O
+   - 3CH3SOH-H2O
+   - 3H3PO4
+   - 3H5PO5
+   - 3HPO3
    - 4C2H5NOS
    - 5C2H5NOS
    - 6C2H5NOS
    - 7C2H5NOS
+   - C2H5NOS
    - CH3SOH
-   - CH3SOH-H2O
    - CH3SOH-2H2O
-   - 2CH3SOH
-   - HPO3
-   - 2HPO3
-   - 3HPO3
+   - CH3SOH-H2O
+   - H2O
+   - H2O+CO
+   - H2O-NH3
    - H3PO4
-   - 2H3PO4
-   - 3H3PO4
    - H5PO5
-   - 2H5PO5
-   - 3H5PO5
    - H7PO6
+   - HPO3
+   - NH3
    - RP126
    - RP126-H2O
    - RP126-H2O-NH3
