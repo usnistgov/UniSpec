@@ -1,7 +1,7 @@
 files: train
 write: False
 write_stats: False
-mode: ann in dictionary.keys()
+mode: True
 combo: True
 collect_neutrals: True
 collect_internals: True
