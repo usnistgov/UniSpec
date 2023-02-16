@@ -31,7 +31,7 @@ from utils import LoadObj
 L = LoadObj(D, embed=config['model_config']['CEembed'])
 
 # Training
-fpostr = np.loadtxt(config['train']['pos']).astype(int)
+fpostr = np.loadtxt(config['train']['pos'])
 ftr = open(config['train']['data'], "r")
 trlab = np.array([line.strip() for line in 
                   open(config['train']['labels'],'r')])
@@ -107,11 +107,11 @@ with open("saved_models/model_config.yaml","w") as file:
 with open("saved_models/dic.yaml","w") as file:
     yaml.dump(dconfig, file)
 with open("saved_models/criteria.txt", 'w') as file:
-    file.write(open(dconfig['criteria_path']).read().split("\n"))
+    file.write(open(dconfig['criteria_path']).read())
 with open("saved_models/modifications.txt", 'w') as file:
-    file.write(open(dconfig['mod_path']).read().split("\n"))
+    file.write(open(dconfig['mod_path']).read())
 with open("saved_models/ion_stats_train.txt", 'w') as file:
-    file.write(open(dconfig['stats_path']).read().split("\n"))
+    file.write(open(dconfig['stats_path']).read())
 
 ###############################################################################
 ########################### Loss function #####################################
