@@ -179,10 +179,9 @@ def train(epochs,
     
     print("Starting training for %d epochs"%epochs)
     tot = len(trlab)
-    steps = (
-        config['steps'] if config['steps']!=False else (
+    steps = np.minimum(
+        config['steps'] if config['steps']!=False else 1e10,
         tot//batch_size if tot%batch_size==0 else tot//batch_size + 1
-        )
     )
     
     # Testing before training begins
