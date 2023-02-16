@@ -361,6 +361,8 @@ class FlipyFlopy(nn.Module):
         initFin(self.final[0].weight)
         nn.init.zeros_(list(self.final.parameters())[1])
         
+        self.global_step = 0
+        
         if verbose:
             print("Embed: %f"%self.embed.std())
             print("Pos: %f"%self.pos.std())

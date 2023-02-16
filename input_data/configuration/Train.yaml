@@ -11,9 +11,9 @@ test:
    pos: ./input_data/txt_pos/fpostest.txt
    data: ./input_data/datasets/test.txt
 
-config: False
-weights: ./saved_models/ckpt_epoch16_0.9263
-restart: False
+config: ./saved_models/model_config.yaml
+weights: ./saved_models/ckpt_step12301_0.1234
+restart: ./saved_models/opt.sd
 transfer: False
 
 model_config:
@@ -29,8 +29,9 @@ model_config:
 
 root_int: 2
 lr: 3e-4
-epochs: 25
+epochs: 50
+steps: 10000
 batch_size: 100
-lr_decay_start: 12
+lr_decay_start: 35
 lr_decay_rate: 0.8
-svwts: False
+svwts: all

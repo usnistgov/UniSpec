@@ -179,7 +179,11 @@ def train(epochs,
     
     print("Starting training for %d epochs"%epochs)
     tot = len(trlab)
-    steps = tot//batch_size if tot%batch_size==0 else tot//batch_size + 1
+    steps = (
+        config['steps'] if config['steps']!=False else (
+        tot//batch_size if tot%batch_size==0 else tot//batch_size + 1
+        )
+    )
     
     # Testing before training begins
     test_loss, tarr = Testing(telab, fposte, test_point, batch_size)
@@ -209,6 +213,7 @@ def train(epochs,
             samples,info = L.input_from_str(trlab[P[begin:end]])
             targ,_ = L.target(fpostr[P[begin:end]], fp=ftr, return_mz=False)
             Loss = train_step(samples, targ)
+            model.global_step += 1
             train_loss += Loss
             
             runav[j%50] = float(Loss.to('cpu').detach().numpy())
@@ -246,11 +251,13 @@ def train(epochs,
                     if file.split('_')[0]=='ckpt': 
                         os.remove('./saved_models/%s'%file)
                 torch.save(model.state_dict(), 
-                            "saved_models/ckpt_epoch%d_%.4f"%(i,-val_loss)
+                            "saved_models/ckpt_step%d_%.4f"%(
+                                model.global_step,-val_loss)
                 )
         elif (svwts=='all') | (svwts=='True'):
             torch.save(model.state_dict(), 
-                        "saved_models/ckpt_epoch%d_%.4f"%(i,-val_loss)
+                        "saved_models/ckpt_step%d_%.4f"%(
+                            model.global_step,-val_loss)
             )
         torch.save(opt.state_dict(), "saved_models/opt.sd")
         
