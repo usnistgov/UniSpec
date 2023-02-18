@@ -11,9 +11,9 @@ test:
    pos: ./input_data/txt_pos/fpostest.txt
    data: ./input_data/datasets/test.txt
 
-config: ./saved_models/model_config.yaml
-weights: ./saved_models/ckpt_step12301_0.1234
-restart: ./saved_models/opt.sd
+config: False
+weights: False
+restart: False
 transfer: False
 
 model_config:

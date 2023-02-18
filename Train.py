@@ -1,4 +1,3 @@
-# Training script
 import numpy as np
 import sys
 import os
@@ -59,8 +58,6 @@ MPIND = np.argmax(Lens)
 ################################## Model ######################################
 ###############################################################################
 
-arrdims=21
-
 # Configuration dictionary
 if config['config'] != False:
     # Load model config
@@ -77,6 +74,7 @@ else:
 
 # Instantiate model
 model = FlipyFlopy(**model_config, device=device)
+arrdims = len(model(L.input_from_str(trlab[0:1])[0], test=True)[1][0])
 model.to(device)
 
 # Load weights
@@ -99,7 +97,7 @@ if config['restart'] != False:
     opt.load_state_dict(torch.load(config['restart'], map_location=device))
 
 ###############################################################################
-########################### Reproducability ###################################
+############################# Reproducability #################################
 ###############################################################################
 if not os.path.exists('./saved_models'): os.makedirs('./saved_models/')
 with open("saved_models/model_config.yaml","w") as file:
@@ -114,7 +112,7 @@ with open("saved_models/ion_stats_train.txt", 'w') as file:
     file.write(open(dconfig['stats_path']).read())
 
 ###############################################################################
-########################### Loss function #####################################
+############################# Loss function ###################################
 ###############################################################################
 
 CS = torch.nn.CosineSimilarity(dim=-1)
@@ -185,7 +183,7 @@ def train(epochs,
     )
     
     # Testing before training begins
-    test_loss, tarr = Testing(telab, fposte, test_point, batch_size)
+    test_loss, _ = 0,0#Testing(telab, fposte, test_point, batch_size)
     val_loss, varr = Testing(vallab, fposval, val_point, batch_size)
     mirrorplot(MPIND)
     if svwts: torch.save(model.state_dict(), 'saved_models/ckpt_%.4f'%(-val_loss))
@@ -199,8 +197,8 @@ def train(epochs,
             opt.param_groups[0]['lr'] *= lr_decay_rate
         
         # trainintime=[]
-        runav = np.zeros((50,))
-        train_loss = 0
+        runav = torch.zeros((50,))
+        train_loss = torch.tensor(0., device=device)
         # Train an epoch
         for j in range(steps):
             start_step = time()
@@ -215,28 +213,28 @@ def train(epochs,
             model.global_step += 1
             train_loss += Loss
             
-            runav[j%50] = float(Loss.to('cpu').detach().numpy())
+            runav[j%50] = Loss
             # trainintime.append(runav[-1])
             if j%50==0: sys.stdout.write("\r\033[KStep %d/%d; Loss: %.3f (%.2f s)"%(
-                    j+1, steps, np.mean(runav), time()-start_step)
+                    j+1, steps, runav.mean(), time()-start_step)
             )
         
         # Testing after training epoch
-        train_loss = train_loss.to('cpu').detach().numpy() / steps
+        train_loss = train_loss.detach().to('cpu').numpy() / steps
         sys.stdout.write("\rTesting...%50s"%(""))
-        test_loss, tarr = Testing(telab, fposte, test_point, batch_size)
+        test_loss, _ = 0,0#Testing(telab, fposte, test_point, batch_size)
         val_loss, varr = Testing(vallab, fposval, val_point, batch_size)
         testintime.append(float(test_loss))
         validintime.append(float(val_loss))
         
         # Saving progress to file after training epoch
-        # with open("C:/Users/jsl6/Desktop/lossintime.txt", "a") as f:
+        # with open("./saved_models/lossintime.txt", "a") as f:
         #     f.write(" ".join([str(q) for q in trainintime]))
         #     f.write(" ")
         with open('./saved_models/actarr.txt','a') as f:
             f.write("".join(['%9d'%m for m in np.arange(arrdims)])+'\n')
             for m in range(config['model_config']['blocks']): 
-                f.write("".join(['%9.5f'%a for a in tarr[m]])+'\n')    
+                f.write("".join(['%9.5f'%a for a in varr[m]])+'\n')    
         mirrorplot(MPIND, epoch=i, maxnorm=True)
         
         # Save checkpoint
@@ -261,13 +259,13 @@ def train(epochs,
         torch.save(opt.state_dict(), "saved_models/opt.sd")
         
         string = (
-  "\rEpoch %d; Train loss: %.3f; Val loss: %6.3f; Test loss: %6.3f; %.1f s\n"%(
+  "Epoch %d; Train loss: %.3f; Val loss: %6.3f; Test loss: %6.3f; %.1f s"%(
                   i, train_loss, -val_loss, -test_loss, time()-start_epoch)
         )
         # Print out results
         with open("./saved_models/losses.txt", 'a') as f:
-            f.write(string)
-        sys.stdout.write(string)
+            f.write(string+"\n")
+        sys.stdout.write("\r"+string+"\n")
     model.to("cpu")
 
 def mirrorplot(iloc=0, epoch=0, maxnorm=True, save=True):
@@ -301,10 +299,6 @@ def mirrorplot(iloc=0, epoch=0, maxnorm=True, save=True):
     ax.set_xlabel("m/z")
     ax.set_ylabel("Intensity")
     
-    # for x,y,x2,y2 in zip(mz,targ,mzpred,pred):
-    #     # ymin, ymax between 0-1
-    #     ax.axvline(x, 0.5, 0.5+(1/1.1)*y/2, linewidth=1, color='red')
-    #     ax.axvline(x2, 0.5-(1/1.1)*y2/2, 0.5, linewidth=1, color='blue')
     ax.vlines(mz, ymin=0, ymax=targ, linewidth=1, color='red')
     ax.vlines(mzpred, ymin=-pred, ymax=0, linewidth=1, color='blue')
     

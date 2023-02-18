@@ -153,19 +153,22 @@ class TalkingHeads(nn.Module):
         O = O.reshape(O.shape[0], -1, self.dv*self.hv)
         resid = self.drop(torch.einsum('abc,cd->adb', O, self.Wo))
         
+        INP = self.shortcut(inp.transpose(-1,-2)).transpose(-1,-2)
+        output = INP + resid
+        
         if test:
             Q_ = Q.mean();Q__ = Q.std();K_ = K.mean();K__ = K.std()
             V_ = V.mean();V__ = V.std();J_ = J.mean();J__ = J.std()
             EL_ = EL.mean();EL__ = EL.std();FM = W.max(2)[0].mean()
             U_ = U.mean();U__ = U.std();O_ = O.mean();O__ = O.std()
             resid_ = resid.mean();resid__ = resid.std()
+            output_ = output.mean();output__ = output.std()
             activations = (Q_, Q__, K_, K__, V_, V__, J_, J__, EL_, EL__, FM, 
-                           U_, U__, O_, O__, resid_, resid__)
+                           U_, U__, O_, O__, resid_, resid__, output_, output__)
         else:
             activations = ()
         
-        INP = self.shortcut(inp.transpose(-1,-2)).transpose(-1,-2)
-        return INP + resid, activations, W
+        return output, activations, W
 
 class FFN(nn.Module):
     def __init__(self,
@@ -221,14 +224,17 @@ class FFN(nn.Module):
         resid2 = torch.einsum('abc,bd->adc', resid1, self.W2)
         resid2 = self.drop(resid2)
         
+        output = inp + resid2
+        
         if test:
             resid1_ = resid1.mean();resid1__ = resid1.std()
             resid2_ = resid2.mean();resid2__ = resid2.std()
-            activations = (resid1_, resid1__, resid2_, resid2__)
+            output_ = output.mean();output__ = output.std()
+            activations = (resid1_, resid1__, resid2_, resid2__, output_, output__)
         else:
             activations = ()
             
-        return inp + resid2, activations
+        return output, activations
 
 class TransBlock(nn.Module):
     def __init__(self,
@@ -361,7 +367,7 @@ class FlipyFlopy(nn.Module):
         initFin(self.final[0].weight)
         nn.init.zeros_(list(self.final.parameters())[1])
         
-        self.global_step = 0
+        self.global_step = nn.Parameter(torch.tensor(0), requires_grad=False)
         
         if verbose:
             print("Embed: %f"%self.embed.std())
@@ -436,10 +442,10 @@ class FlipyFlopy(nn.Module):
             [inp, inpch, inpce] = inp
             
             ch_embed = nn.functional.silu(
-                self.denseCH(self.embedCE(inpch, self.cesz, 100))
+                self.denseCH(self.embedCE(inpch, self.cesz, 10))
             )
             ce_embed = nn.functional.silu(
-                self.denseCE(self.embedCE(inpce, self.cesz))
+                self.denseCE(self.embedCE(inpce, self.cesz, 100))
             )
             embed = torch.cat([ch_embed,ce_embed],-1)
         else:
