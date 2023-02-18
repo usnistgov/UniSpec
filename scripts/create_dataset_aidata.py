@@ -194,20 +194,25 @@ for file in Files:
                     Ints.append(float(ab))
                     anns = Ann.split()[0].strip()[1:-1].split(",")[0] # multiple annotations on the line, separated by commas
                     for ann in [anns]: # cycle through each annotation
-                        # Convert internal notation to start>extent
-                        if ann[:3]=='Int': 
+                        # Internals
+                        if ann[:3]=='Int':
                             ann = "".join(ann.split('/')[:-1]) # Turn Int/{ann} into Int{ann}
-                            hold = re.sub("[+-]", ',', ann).split(",") # [ann, neut/iso]
-                            if seqInt.find(hold[0][3:])==-1: ERR_counter['int']+=1
-                            # issue with internals starting at 0
-                            if seqInt.find(hold[0][3:]) == 0:
-                                # Find first uppercase match after 1st AA
-                                start = seqInt[1:-1].upper().find(hold[0][3:].upper()) + 1
-                            else: start = seqInt.find(hold[0][3:])
-                            ann = 'Int%d>%d%s'%(start,
-                                                len(hold[0][3:]),
-                                                ann[len(hold[0]):]
-                            )
+                            if config['internal_notation']=='positional':
+                                # Convert internal notation to start>extent
+                                hold = re.sub("[+-]", ',', ann).split(",") # [ann, neut/iso]
+                                if seqInt.find(hold[0][3:])==-1: ERR_counter['int']+=1
+                                # issue with internals starting at 0
+                                if seqInt.find(hold[0][3:]) == 0:
+                                    # Find first uppercase match after 1st AA
+                                    start = seqInt[1:-1].upper().find(hold[0][3:].upper()) + 1
+                                else: start = seqInt.find(hold[0][3:])
+                                ann = 'Int%d>%d%s'%(start,
+                                                    len(hold[0][3:]),
+                                                    ann[len(hold[0]):]
+                                )
+                            else:
+                                # Internals by amino acid content (no modification lower case)
+                                ann = ann[:3] + ann[3:].upper()
                         if ann[-3:]=='ppm': ann = ann.split('/')[0] # get regular annotation
                         # DIC is a dictionary, ion->[mz,ab], for the current spectrum
                         if eval(config['mode']):#ann in dictionary.keys():# or ann[:3]=='Int':
