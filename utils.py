@@ -1025,7 +1025,8 @@ class EvalObj(LoadObj):
         seq,mods,charge,ce = pepinfo
         
         ions = np.array(list(self.D.dictionary.keys()))
-        masses = np.array([self.D.calcmass(seq,charge,mods,ion) for ion in ions]) #TODO unnecessary mass calculation; filter out impossible ions before mass calculation
+        # Possible speedup - filter out impossible ions before mass calculation
+        masses = np.array([self.D.calcmass(seq,charge,mods,ion) for ion in ions])
         
         sort = masses.argsort()
         masses = masses[sort]

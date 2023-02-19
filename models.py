@@ -175,6 +175,7 @@ class FFN(nn.Module):
                  in_ch,
                  units=None,
                  embed=None,
+                 learn_embed=True,
                  drop=0
                  ):
         """
@@ -186,19 +187,35 @@ class FFN(nn.Module):
         :param embed: Incoming units for for tensor adding charge and 
                       collision energy embedding before ReLU. If None then no
                       embedding is added in between linear transofrmations.
+        :param learn_embed: If embed==units, setting to False allows embedding
+                            to be unlearned. 
         :param drop: Dropout rate for residual layer.
         
         """
         super(FFN, self).__init__()
+        
         units = in_ch if units==None else units
         self.embed = embed
+        self.learn_embed = learn_embed
+        if (self.embed is not None) and (self.learn_embed == False):
+            assert units==self.embed,(
+                "units must be equal to embed dimension if embed not learned"
+            )
+        
         self.W1 = nn.Parameter(initFFN((in_ch, units), 1, 1))
         self.W2 = nn.Parameter(initFFN((units, in_ch), 1, 0.1))
         if self.embed is not None:
-            self.chce =  nn.Linear(self.embed, units)
+            self.chce =  (
+                nn.Linear(self.embed, units)
+                if learn_embed | embed!=units else
+                nn.Identity()
+            )
+        
         self.drop = nn.Identity() if drop==0 else nn.Dropout(drop)
+        
         if verbose:
             print("FFN=%f"%self.W1.std())
+    
     def forward(self, inp, embinp=None, test=True):
         """
         Feed forward network forward function.

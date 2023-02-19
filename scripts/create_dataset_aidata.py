@@ -212,7 +212,7 @@ for file in Files:
                                 )
                             else:
                                 # Internals by amino acid content (no modification lower case)
-                                ann = ann[:3] + ann[3:].upper()
+                                pass
                         if ann[-3:]=='ppm': ann = ann.split('/')[0] # get regular annotation
                         # DIC is a dictionary, ion->[mz,ab], for the current spectrum
                         if eval(config['mode']):#ann in dictionary.keys():# or ann[:3]=='Int':

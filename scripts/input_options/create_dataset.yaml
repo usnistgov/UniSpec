@@ -3,7 +3,7 @@ write: False
 write_stats: False
 mode: 'True'
 combo: True
-internal_notation: 'other'
+internal_notation: 'positional'
 collect_neutrals: False
 collect_internals: True
 collect_immoniums: False
@@ -13,9 +13,15 @@ collect_labels: False
 collect_others: False
 curdir: C:/Users/joell/Documents/Python/NIST/Paper3/Prosit+/Predire/
 train_files:
-   - C:/Users/joell/MyDatasets/MassSpec/Kuster/KusterSyn_MOD_1_phospho_selected_passed.msp
-   - C:/Users/joell/MyDatasets/MassSpec/Kuster/KusterSyn_MOD_1_selected_passed.msp
+   - C:/Users/glapi/MyDatasets/MassSpec/AIData/Training/AItrain_EliteHuman_2022418v2_edit2.msp
+   - C:/Users/glapi/MyDatasets/MassSpec/AIData/Training/AItrain_LumosPhospho_2022418v2_2023J1_edit2.msp
+   - C:/Users/glapi/MyDatasets/MassSpec/AIData/Training/AItrain_LumosSynthetic_2022418v2_edit2.msp
+   - C:/Users/glapi/MyDatasets/MassSpec/AIData/Training/AItrain_QEHumanCho_2022418v2_edit2.msp
+   - C:/Users/glapi/MyDatasets/MassSpec/AIData/Training/AItrain_VelosHumanCho_2022418v2_edit2.msp
+   - C:/Users/glapi/MyDatasets/MassSpec/TMT/cptac3_tmt_selected_passed_best_1.msp
+   - C:/Users/glapi/MyDatasets/MassSpec/TMT/cptac3_tmt_selected_passed_best_2.msp
+   - C:/Users/glapi/MyDatasets/MassSpec/TMT/cptac3_tmt_selected_passed_best_3.msp
 val_files:
-   - C:/Users/joell/MyDatasets/MassSpec/AIData/Validation/ValidUniq2022418_edit.msp
+   - C:/Users/glapi/MyDatasets/MassSpec/AIData/Validation/ValidUniq2022418_2023J1_edit.msp
 test_files:
-   - C:/Users/joell/MyDatasets/MassSpec/AIData/Validation/ValidSim2022418_edit.msp
+   - C:/Users/glapi/MyDatasets/MassSpec/AIData/Validation/ValidUniq2022418_2023J1_edit.msp
