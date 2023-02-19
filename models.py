@@ -312,6 +312,7 @@ class FlipyFlopy(nn.Module):
                  mask=False,
                  CEembed=False,
                  CEembed_units=256,
+                 learn_ffn_embed=True,
                  pos_type='learned',
                  device='cpu'
                  ):
@@ -372,9 +373,10 @@ class FlipyFlopy(nn.Module):
             self.denseCH = nn.Linear(self.cesz, self.cesz)
             self.denseCE = nn.Linear(self.cesz, self.cesz)
         
-        head = (embedsz,)+tuple(head)+(None,None,drop,None)
+        head_args = (embedsz,)+tuple(head)+(None,None,drop,None)
+        ffn_args = (embedsz, units, ffnembed, learn_ffn_embed, drop)
         self.main = nn.ModuleList([
-            TransBlock(head, (embedsz, units, ffnembed, drop)) 
+            TransBlock(head_args, ffn_args) 
             for _ in range(blocks)]
         )
         

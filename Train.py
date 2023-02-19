@@ -22,12 +22,26 @@ with open("./input_data/configuration/dic.yaml", 'r') as stream:
 from utils import DicObj
 D = DicObj(**dconfig)
 
+# Configuration dictionary
+if config['config'] != False:
+    # Load model config
+    with open(config['config'], 'r') as stream:
+        model_config = yaml.safe_load(stream)
+else:
+    channels = D.seq_channels if config['model_config']['CEembed'] else D.channels
+    model_config = {
+        'in_ch': channels,
+        'seq_len': D.seq_len,
+        'out_dim': len(D.dictionary),
+        **config['model_config']
+    }
+
 ###############################################################################
 ################################ Dataset ######################################
 ###############################################################################
 
 from utils import LoadObj
-L = LoadObj(D, embed=config['model_config']['CEembed'])
+L = LoadObj(D, embed=model_config['CEembed'])
 
 # Training
 fpostr = np.loadtxt(config['train']['pos'])
@@ -57,20 +71,6 @@ MPIND = np.argmax(Lens)
 ###############################################################################
 ################################## Model ######################################
 ###############################################################################
-
-# Configuration dictionary
-if config['config'] != False:
-    # Load model config
-    with open(config['config'], 'r') as stream:
-        model_config = yaml.safe_load(stream)
-else:
-    channels = D.seq_channels if config['model_config']['CEembed'] else D.channels
-    model_config = {
-        'in_ch': channels,
-        'seq_len': D.seq_len,
-        'out_dim': len(D.dictionary),
-        **config['model_config']
-    }
 
 # Instantiate model
 model = FlipyFlopy(**model_config, device=device)
@@ -186,7 +186,10 @@ def train(epochs,
     test_loss, _ = 0,0#Testing(telab, fposte, test_point, batch_size)
     val_loss, varr = Testing(vallab, fposval, val_point, batch_size)
     mirrorplot(MPIND)
-    if svwts: torch.save(model.state_dict(), 'saved_models/ckpt_%.4f'%(-val_loss))
+    if svwts: 
+        torch.save(model.state_dict(), 'saved_models/ckpt_step%d_%.4f'%(
+                             model.global_step, -val_loss)
+        )
     print("Val/Test: %6.3f / %6.3f"%(-val_loss,-test_loss))
     
     # Training loop
