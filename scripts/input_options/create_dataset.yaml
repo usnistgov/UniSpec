@@ -3,14 +3,16 @@ write: False
 write_stats: False
 mode: 'True'
 combo: True
-internal_notation: 'other'
-collect_neutrals: False
+internal_notation: 'positional'
+# Various outputs to select
+collect_neutrals: True
 collect_internals: True
-collect_immoniums: False
-collect_modifications: False
-collect_tmt: False
+collect_immoniums: True
+collect_modifications: True
+collect_tmt: True
 collect_labels: False
 collect_others: False
+# Directories and paths
 curdir: C:/Users/glapi/Documents/Python/Pytorch/MassSpec/Predire/
 internaldir: input_data/ion_stats/internal_counts_positional.txt
 train_files:
@@ -19,10 +21,28 @@ train_files:
    - C:/Users/glapi/MyDatasets/MassSpec/AIData/Training/AItrain_LumosSynthetic_2022418v2_edit2.msp
    - C:/Users/glapi/MyDatasets/MassSpec/AIData/Training/AItrain_QEHumanCho_2022418v2_edit2.msp
    - C:/Users/glapi/MyDatasets/MassSpec/AIData/Training/AItrain_VelosHumanCho_2022418v2_edit2.msp
-   #- C:/Users/glapi/MyDatasets/MassSpec/TMT/cptac3_tmt_selected_passed_best_1.msp
-   #- C:/Users/glapi/MyDatasets/MassSpec/TMT/cptac3_tmt_selected_passed_best_2.msp
-   #- C:/Users/glapi/MyDatasets/MassSpec/TMT/cptac3_tmt_selected_passed_best_3.msp
+   - C:/Users/glapi/MyDatasets/MassSpec/TMT/cptac3_tmt_selected_passed_best_1.msp
+   - C:/Users/glapi/MyDatasets/MassSpec/TMT/cptac3_tmt_selected_passed_best_2.msp
+   - C:/Users/glapi/MyDatasets/MassSpec/TMT/cptac3_tmt_selected_passed_best_3.msp
 val_files:
    - C:/Users/glapi/MyDatasets/MassSpec/AIData/Validation/ValidUniq2022418_2023J1_edit.msp
 test_files:
    - C:/Users/glapi/MyDatasets/MassSpec/AIData/Validation/ValidUniq2022418_2023J1_edit.msp
+# Criteria for what peptides to include when write or write_stats
+peptide_criteria:
+    min_length: 0
+    max_length: 40
+    min_charge: 0
+    max_charge: 8
+    min_energy: 0
+    max_energy: 1000
+    modifications:
+       - Acetyl
+       - Carbamidomethyl
+       - CAM
+       - Gln->pyro-Glu
+       - Glu->pyro-Glu
+       - Oxidation
+       - Phospho
+       - Pyro-carbamidomethyl
+       - TMT6plex

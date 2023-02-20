@@ -26,8 +26,7 @@ from time import time
 with open('./input_options/create_dataset.yaml','r') as stream:
     config = yaml.safe_load(stream)
 
-with open("./input_options/peptide_criteria.yaml",'r') as stream:
-    pep = yaml.safe_load(stream)
+pep = config['peptide_criteria']
 
 curdir = config['curdir']
 sys.path.append(config['curdir'])
