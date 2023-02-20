@@ -116,7 +116,7 @@ if config['combo']:
     f.close()
     # add internals
     if not config['collect_internals']:
-        for i,line in enumerate(open(curdir+"input_data/ion_stats/internal_counts.txt","r")):
+        for i,line in enumerate(open(curdir+config['internaldir'],"r")):
             if int(line.split()[1])>0: dictionary[line.split()[0]] = len(dictionary)
 else:
     """Alternatively I could create a dictionary beforehand and read it in from

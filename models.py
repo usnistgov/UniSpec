@@ -372,6 +372,9 @@ class FlipyFlopy(nn.Module):
         if CEembed:
             self.denseCH = nn.Linear(self.cesz, self.cesz)
             self.denseCE = nn.Linear(self.cesz, self.cesz)
+            self.postcat = (nn.Identity() if learn_ffn_embed else 
+                             nn.Linear(2*self.cesz, units)
+            ) # possible compat issue
         
         head_args = (embedsz,)+tuple(head)+(None,None,drop,None)
         ffn_args = (embedsz, units, ffnembed, learn_ffn_embed, drop)
@@ -466,7 +469,7 @@ class FlipyFlopy(nn.Module):
             ce_embed = nn.functional.silu(
                 self.denseCE(self.embedCE(inpce, self.cesz, 100))
             )
-            embed = torch.cat([ch_embed,ce_embed],-1)
+            embed = self.postcat(torch.cat([ch_embed,ce_embed],-1)) # possible compat issue
         else:
             inp = inp[0]
             embed = None
