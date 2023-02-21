@@ -1,23 +1,27 @@
-criteria: input_data/ion_stats/criteria.txt
-dic_config: ./input_data/configuration/dic.yaml
-model_config: saved_models/config.tsv
-model_ckpt: saved_models/ckpt_epoch16_0.9263
+criteria: saved_models/230220/criteria.txt
+dic_config: saved_models/230220/dic.yaml
+model_config: saved_models/230220/model_config.yaml
+model_ckpt: saved_models/230220/ckpt_step410000_0.9272
+stats_txt: saved_models/230220/ion_stats_train.txt
 enable_gpu: True
 dsets:
    valuniq: 
-      msp: C:/Users/joell/MyDatasets/MassSpec/AIData/Validation/ValidUniq2022418_edit.msp
-      pos: ./input_data/msp_pos/valuniq.pos
+      msp: C:/Users/glapi/MyDatasets/MassSpec/AIData/Validation/ValidUniq2022418_2023J1_edit.msp
+      pos: input_data/msp_pos/valuniq.pos
+   valsim:
+      msp: C:/Users/glapi/MyDatasets/MassSpec/AIData/Validation/ValidSim2022418_edit.msp
+      pos: input_data/msp_pos/valsim.pos
+   valcom:
+      msp: C:/Users/glapi/MyDatasets/MassSpec/AIData/Validation/ValidCom2022418_edit.msp
+      pos:
 dsetspred:
-   valuniq:
-      msp: ./predictions/out.msp
-      pos: None
  
 mode: write_msp
 write_msp:
-   new: True
-   label_path: ./predictions/valuniq.labels
-   dset: valuniq
+   new: False
+   label_path:
+   dset: valcom
    comments_path: None
    cecorr: 0
-   print_every: 100
-   outfn: "./temp/aout"
+   print_every: 2000
+   outfn: "valcom_pred.msp"

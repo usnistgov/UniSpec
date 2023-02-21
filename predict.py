@@ -11,12 +11,12 @@ with open("./input_data/configuration/predict.yaml", 'r') as stream:
     config = yaml.safe_load(stream)
 
 # Instantiate DicObj
-with open("./input_data/configuration/dic.yaml", 'r') as stream:
+with open(config['dic_config'], 'r') as stream:
     dconfig = yaml.safe_load(stream)
 D = DicObj(**dconfig)
 
 # Instantiate model
-with open("saved_models/model_config.yaml") as stream:
+with open(config['model_config']) as stream:
     model_config = yaml.safe_load(stream)
 model1 = FlipyFlopy(**model_config, device=device)
 model1.load_state_dict(

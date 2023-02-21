@@ -653,7 +653,7 @@ class EvalObj(LoadObj):
         # Filenames of experimental msp files
         self.dsets = config['dsets']
         for key in self.dsets.keys():
-            self.add_posarray(key)
+            if self.dsets[key]['pos'] is not None: self.add_posarray(key)
         # Filenames of predicted msp files
         self.dsetspred = {}
         # Labels
@@ -663,7 +663,7 @@ class EvalObj(LoadObj):
         self.diff = lambda theor, exp: exp[None] - theor[:,None]
         self.ionstats = {
             line.split()[0]:[int(line.split()[1]), float(line.split()[2])] 
-            for line in open(curpath+'input_data/ion_stats/ion_stats_train.txt', 'r')
+            for line in open(config['stats_txt'], 'r')
         }
         # proinds = np.loadtxt(path+'input_data/ion_stats/proinds.txt').astype('int')
         # self.prosit_filter = np.zeros(len(dobj.dictionary), dtype='int') 
@@ -1273,12 +1273,13 @@ class EvalObj(LoadObj):
                 
         elif type(inp)==str:
             assert inp in self.dsets.keys(), "inp not in dsets.keys()"
-            if self.dsets[inp]['pos']=='None':
+            if self.dsets[inp]['pos'] == None:
                 print("Searching for file positions in %s"%inp)
                 Pos = self.FPs(
                     self.dsets[inp]['msp'], 
-                    '(len(seq)<self.D.seq_len)&(charge<self.D.chlim[-1])'
+                    '(len(seq)<=self.D.seq_len)&(charge<=self.D.chlim[-1])'
                 )
+                np.savetxt("./%s.pos"%inp, Pos)
             else:
                 Pos = np.loadtxt(self.dsets[inp]['pos'])
             # Get data on raw spectra
