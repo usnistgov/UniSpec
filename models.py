@@ -337,6 +337,8 @@ class FlipyFlopy(nn.Module):
         CEembed : Option for embedding charge and energy with fourier features.
         CEembed_units : Number of fourier features to expand both charge and
                         energy by, before concatenation and feeding to FFN.
+        learn_ffn_embed: If True, FFN layers project incoming CE embedding. If
+                         False, 1 projections after concatenation, used throughout.
         pos_type : Either 'learned' positional embedding, otherwise fourier 
                    feature embedding.
         device : Device to run on.
@@ -368,13 +370,15 @@ class FlipyFlopy(nn.Module):
         
         self.CEembed = CEembed
         self.cesz = CEembed_units
-        ffnembed = 2*CEembed_units if CEembed else None
         if CEembed:
             self.denseCH = nn.Linear(self.cesz, self.cesz)
             self.denseCE = nn.Linear(self.cesz, self.cesz)
             self.postcat = (nn.Identity() if learn_ffn_embed else 
                              nn.Linear(2*self.cesz, units)
-            ) # possible compat issue
+            )
+            ffnembed = 2*CEembed_units if learn_ffn_embed else units
+        else:
+            ffnembed = None
         
         head_args = (embedsz,)+tuple(head)+(None,None,drop,None)
         ffn_args = (embedsz, units, ffnembed, learn_ffn_embed, drop)
