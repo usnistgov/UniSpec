@@ -473,7 +473,7 @@ class FlipyFlopy(nn.Module):
             ce_embed = nn.functional.silu(
                 self.denseCE(self.embedCE(inpce, self.cesz, 100))
             )
-            embed = self.postcat(torch.cat([ch_embed,ce_embed],-1)) # possible compat issue
+            embed = self.postcat(torch.cat([ch_embed,ce_embed],-1))
         else:
             inp = inp[0]
             embed = None

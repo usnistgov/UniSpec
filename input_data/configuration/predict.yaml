@@ -18,10 +18,10 @@ dsetspred:
  
 mode: write_msp
 write_msp:
-   new: False
-   label_path:
+   new: True
+   label_path: 'C:/Users/glapi/Documents/Machine Learning Docs/MassSpec/Pytorch/labels/HMPhos_labels16.txt'
    dset: valcom
-   comments_path: None
+   comments_path: 'C:/Users/glapi/Documents/Machine Learning Docs/MassSpec/Pytorch/labels/HMPhos_comments.txt'
    cecorr: 0
    print_every: 2000
-   outfn: "valcom_pred.msp"
+   outfn: "temp/aout"
