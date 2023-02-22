@@ -8,6 +8,7 @@ import re
 import os
 import numpy as np
 import torch
+from difflib import get_close_matches as gcm
 import matplotlib.pyplot as plt
 
 class DicObj:
@@ -683,15 +684,18 @@ class EvalObj(LoadObj):
             self.dsetspred[dset]['Pos'] = np.loadtxt(self.dsetspred[dset]['pos'])
     
     def search_poslabels(self, dset, pred=False):
+        """
+        Search for and add labels and their file positions to self.dsets(pred)
+        
+        :param dset: Dataset name to search
+        :param pred: Is dset predicted msp or not?
+        """
         typ = self.dsetspred[dset] if pred else self.dsets[dset]
         filename = typ['msp']
-        pos,labels = self.FPs(
-            filename, 
-            '(len(seq)<=%d)&(charge<=%d)'%(self.D.seq_len,self.D.chlim[-1])
-        )
+        pos,labels = self.FPs(filename, None)
         print("%s(pred=%s): Found %d labels"%(dset, str(pred), len(labels)))
         typ['Pos'] = pos
-        typ['lab'] = labels
+        typ['lab'] = {a:b for a,b in zip(labels, pos)}
     
     def add_labeldic(self, dset):
         """
@@ -1296,11 +1300,11 @@ class EvalObj(LoadObj):
             print("\nmean(CS) = %.3f"%(CS/a))
             
     def mirrorplot(self,
-                   index=0,
+                   inp=0,
                    rawdset='valuniq',
+                   predset='valuniq',
                    predict=True,
                    cecorr=0,
-                   labelsearch=True,
                    maxnorm=True,
                    prosit_inds=False,
                    maxraw=None, # lessen the intense peaks, pick up low peaks
@@ -1310,12 +1314,12 @@ class EvalObj(LoadObj):
 
         Parameters
         ----------
-        index : Spectrum index in your dataset.
-        rawdset : Dataset name from self.fnms.
+        inp : Either spectrum index in your rawdset or label.
+        rawdset : Dataset name in self.dsets
+        predset : Dataset name in self.dsetspred
         predict : Predict a spectrum with the model (True) or load a previous
                   prediction (False) from a generated library.
         cecorr : Collision energy correction to add to a predicted spectrum.
-        labelsearch : If True, search for the raw label in predicted library.
         maxnorm : Normalize max intensity to 1 if True
         prosit_inds : Only plot the prosit ions in your prediction.
         maxraw : Set most intense peaks to maxraw and re-normalize.
@@ -1330,33 +1334,41 @@ class EvalObj(LoadObj):
         # self.model.eval()
         # self.model.to("cpu")
         
+        # set Pos
+        if type(inp)==int:
+            index = inp
+            Pos = self.dsets[rawdset]['Pos'][index]
+        elif type(inp)==str:
+            assert 'lab' in self.dsets[rawdset].keys(), 'No labels for %s'%rawdset
+            label_match = gcm(inp, self.dsets[rawdset]['lab'].keys())[0]
+            Pos = self.dsets[rawdset]['lab'][label_match]
+        else: raise AssertionError("inp must be either index or label")
+        
         # Get raw data
         with open(self.dsets[rawdset]['msp'], 'r') as g:
-            Pos = np.loadtxt(self.dsets[rawdset]['pos'])
-            label, (rawmz,rawab,rawion) = self.inp_spec_msp(
-                Pos[index], g
-            )
-            label = self.add_ce(label, cecorr)
+            assert 'Pos' in self.dsets[rawdset].keys()
+            label, (rawmz,rawab,rawion) = self.inp_spec_msp(Pos, g)
+            label_ = self.add_ce(label, cecorr)
             if maxraw != None:
                 rawab[rawab>maxraw] *= maxraw
                 rawab /= maxraw
         # Get predicted data
-        if predict==True: # use model to predict spectrum
+        # use model to predict spectrum
+        if predict==True:
             (pmz,pab,pions), (seq,mods,charge,ev,nce) = self.predict_spectrum_new(
-                label, maxnorm=maxnorm, prosit_inds=prosit_inds
+                label_, maxnorm=maxnorm, prosit_inds=prosit_inds
             )
-        else: # predicted spectrum is from existing msp file
-            # find the label on the fly. Requires same filename as raw dataset. 
-            # Use e.g. mab, valuniq, etc.    
-            if labelsearch:
-                pos = self.FPs_from_labels([label], self.fnmspred[rawdset])[0]
-                assert pos!=-1, "Label not found."
-            # use precalculated positions in predicted msp. Use e.g. mabps, valuniqps
-            else: 
-                pos = self.dsetspred[rawdset]['pos'][index]
-            with open(self.dsetspred[rawdset]['msp'],'r') as g:
-                label, (pmz,pab,pions) = self.inp_spec_msp(pos, g)
-            [seq,other] = label.split('/')
+        # predicted spectrum is from existing msp file
+        else:
+            # find the label on the fly
+            # Use e.g. mab, valuniq, etc.
+            assert 'lab' in self.dsetspred[predset].keys()
+            label_match = gcm(label, self.dsetspred[predset]['lab'].keys())[0]
+            pos = self.dsetspred[predset]['lab'][label_match]
+            
+            with open(self.dsetspred[predset]['msp'],'r') as g:
+                label_, (pmz,pab,pions) = self.inp_spec_msp(pos, g)
+            [seq,other] = label_.split('/')
             [charge,mods,ev,nce] = other.split('_')
             charge = int(charge)
             ev = float(ev[:-2])
@@ -1385,72 +1397,5 @@ class EvalObj(LoadObj):
         )
         
         if save:
-            fig.savefig("C:/Users/jsl6/Desktop/mirroplot%d.jpg"%(index))
+            fig.savefig("./mirroplot.jpg")
             plt.close()
-    
-    def plotAM(self, 
-               label,
-               layer=0,
-               cols=4,
-               maxmap=16,
-               trunc=False, 
-               save=False):
-        """
-        Plot the attention maps for a single predicted peptide.
-
-        Parameters
-        ----------
-        label : Input peptide label to be predicted
-        layer : Layer to plot attention heads. If <0 then it plots all layers
-                for a single head dimension.
-        cols : How many columns to have in the figure
-        maxmap : Maximum attention maps to plot for a layer. If None, plot all.
-        trunc : If True, truncate attention map to non-null amino acids.
-        save : Save figure to file
-        """
-        samples, info = self.input_from_str([label])
-        (seq,mod,charge,ev) = info[0]
-        with torch.no_grad():
-            out1,out2,FMs = self.AM(samples)
-        length = len(seq)
-        seq += (self.D.seq_len-length)*'X'
-        
-        plt.close('all')
-        if layer>-1:
-            maxmaps = FMs[layer].shape[-1] if maxmap==None else maxmap
-            rows = maxmaps//cols
-            fig,axes = plt.subplots(rows, cols)
-            if rows==1: axes = np.expand_dims(axes,0)
-            fig.text(0.05,0.95,"%s(%d)"%(seq[:length],length))
-            map_index = np.random.choice(np.arange(FMs[layer].shape[-1]), maxmaps)
-            for m in range(rows):
-                for n in range(cols):
-                    axes[m,n].imshow(
-                        FMs[layer][0, ..., map_index[m*cols+n]].detach().numpy()
-                    )
-                    axes[m,n].xaxis.set_ticks(np.arange(40))
-                    axes[m,n].xaxis.set_ticklabels(list(seq), fontsize=7)
-                    axes[m,n].yaxis.set_ticks(np.arange(40))
-                    axes[m,n].yaxis.set_ticklabels(list(seq), fontsize=7)
-                    if trunc:
-                        axes[m,n].set_xlim([0,length-1])
-                        axes[m,n].set_ylim([length-1,0])
-                    # axes[m,n].invert_yaxis()
-                    axes[m,n].xaxis.tick_top()
-        else:
-            rows = len(FMs)
-            fig, axes = plt.subplots(rows, cols)
-            fig.text(0.05,0.95,"%s(%d)"%(seq[:length],length))
-            for m in range(rows):
-                for n in range(cols):
-                    axes[m,n].imshow(FMs[m][0, ..., n].detach().numpy())
-                    if trunc:
-                        axes[m,n].set_xlim([0,length-1])
-                        axes[m,n].set_ylim([length-1,0])
-
-        if save:
-            fig.subplots_adjust(hspace=0, wspace=0)
-            fig.set_figwidth(20)
-            fig.set_figheight(12)
-            fig.tight_layout()
-            fig.savefig("C:/Users/jsl6/Desktop/hold.jpg")

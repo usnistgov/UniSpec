@@ -41,7 +41,8 @@ if config['mode']=='write_msp':
         labels = open(config['write_msp']['label_path']).read().split("\n")
         
         if config['write_msp']['comments_path'] != None:
-            assert os.path.exists(config['write_msp']['comments_path']), 'comments path does not exist'
+            assert os.path.exists(config['write_msp']['comments_path']), (
+                'comments path does not exist')
             comments = open(config['write_msp']['comments_path']).read().split('\n')
         else:
             comments = None

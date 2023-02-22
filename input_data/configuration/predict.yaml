@@ -24,6 +24,9 @@ dsetspred:
    valcomps:
       msp: predictions/valcom_ps.msp
       pos:
+   valuniq:
+      msp: predictions/valuniq_pred.msp
+      pos:
 mode: interactive
 write_msp:
    new: True
