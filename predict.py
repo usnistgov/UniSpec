@@ -16,15 +16,18 @@ with open(config['dic_config'], 'r') as stream:
 D = DicObj(**dconfig)
 
 # Instantiate model
-with open(config['model_config']) as stream:
-    model_config = yaml.safe_load(stream)
-model1 = FlipyFlopy(**model_config, device=device)
-model1.load_state_dict(
-    torch.load(config['model_ckpt'])
-)
+if config['model_config'] is not None:
+    with open(config['model_config']) as stream:
+        model_config = yaml.safe_load(stream)
+    model1 = FlipyFlopy(**model_config, device=device)
+    model1.load_state_dict(
+        torch.load(config['model_ckpt'])
+    )
+    mlist = [model1]
+else:
+    mlist = []
 
 # Instantiate EvalObj
-mlist = [model1]
 E = EvalObj(config, mlist, D, enable_gpu=config['enable_gpu'])
 
 if config['mode']=='write_msp':

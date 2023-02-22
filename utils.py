@@ -168,7 +168,7 @@ class DicObj:
 
         """
         # modification
-        Mstart = mods.find('(') if mods!='0' else 1 # EDIT 230121
+        Mstart = mods.find('(') if mods!='0' else 1
         modamt = int(mods[0:Mstart])
         modlst = []
         if modamt>0:
@@ -276,7 +276,7 @@ class LoadObj:
         """
         seq,other = string.split('/')
         [charge,mods,ev,nce] = other.split('_')
-        # Mstart = mods.find('(') if mods!='0' else 1 # EDIT 230121
+        # Mstart = mods.find('(') if mods!='0' else 1
         # modnum = int(mods[0:Mstart])
         # if modnum>0:
         #     modlst = [re.sub('[()]','',m).split(',') 
@@ -309,11 +309,11 @@ class LoadObj:
         ).T
         output[len(self.D.dic)-1, len(seq):] = 1.
         # PTMs
-        Mstart = mod.find('(') if mod!='0' else 1 #EDIT 230118
-        modamt = int(mod[0:Mstart]) #EDIT 230118
+        Mstart = mod.find('(') if mod!='0' else 1
+        modamt = int(mod[0:Mstart])
         output[len(self.D.dic)] = 1.
         if modamt>0:
-            hold = [re.sub('[()]', '', n) for n in mod[Mstart:].split(")(")] #EDIT 230118
+            hold = [re.sub('[()]', '', n) for n in mod[Mstart:].split(")(")]
             for n in hold:
                 [pos,aa,modtyp] = n.split(',')
                 output[self.D.mdic[modtyp], int(pos)] = 1.
@@ -636,26 +636,30 @@ class EvalObj(LoadObj):
                  rawdatapath='C:/Users/jsl6/MyDatasets/MassSpec/'
                  ):
         self.model_list = model_list
-        embed = model_list[0].CEembed
-        super().__init__(dobj, embed)
-        self.enable_gpu = enable_gpu
-        for model in model_list: model.eval()
         self.device = torch.device(
             "cuda:0" if torch.cuda.is_available() else "cpu"
         )
-        if enable_gpu:
-            self.model_list = [model.to(self.device) for model in model_list]
-        self.model = lambda inp: torch.cat(
-            [model(inp)[0] for model in self.model_list], 
-            0).mean(0)
-        self.AM = model_list[0]
+        self.enable_gpu = enable_gpu
+        embed = model_list[0].CEembed if len(model_list)>0 else False
+        super().__init__(dobj, embed)
+        
+        if len(model_list)>0:
+            for model in model_list: model.eval()
+            if enable_gpu:
+                self.model_list = [model.to(self.device) for model in model_list]
+            self.model = lambda inp: torch.cat(
+                [model(inp)[0] for model in self.model_list], 
+                0).mean(0)
+            self.AM = model_list[0]
         
         # Filenames of experimental msp files
         self.dsets = config['dsets']
         for key in self.dsets.keys():
             if self.dsets[key]['pos'] is not None: self.add_posarray(key)
         # Filenames of predicted msp files
-        self.dsetspred = {}
+        self.dsetspred = config['dsetspred']
+        for key in self.dsetspred.keys():
+            if self.dsetspred[key]['pos'] is not None: self.add_posarray(key)
         # Labels
         self.lab = {}
         
@@ -965,7 +969,7 @@ class EvalObj(LoadObj):
         
         # modification
         # modlst = []
-        # Mstart = mods.find('(') if mods!='0' else 1 # EDIT 230121
+        # Mstart = mods.find('(') if mods!='0' else 1
         # modamt = int(mods[0:Mstart])
         # if modamt>0:
         #     Mods = mods[Mstart:].split(')(') # )( always separates modifications
@@ -1192,7 +1196,7 @@ class EvalObj(LoadObj):
                 
                 # Write header lines
                 label = '%s/%d_%s_%.1feV_NCE%.1f'%(seq,charge,mods,EV,NCE)
-                f.write("Name: %s\n"%label) # EDIT 230116
+                f.write("Name: %s\n"%label)
                 f.write('MW: %.4f\n'%MW)
                 f.write('Comment: Single Pep=Tryptic Collision_energy=%.1f '%ev)
                 f.write('Mods=%s Fullname=R.%s.L Charge=%d Parent=%.4f %s\n'%(
@@ -1213,8 +1217,8 @@ class EvalObj(LoadObj):
                     # Convert Internal to normal notation, else use original ion annotation
                     ion2 = ('Int/%s/%d'%(Seq[start:start+ext]+back,start) 
                             if 'Int' in ion else ion)
-                    ab = int(ab*10000) # save memory EDIT 230115
-                    f.write('%.4f\t%d\t\"%s\"\n'%(mass,ab,ion2)) # EDIT 230115
+                    ab = int(ab*10000) # save memory
+                    f.write('%.4f\t%d\t\"%s\"\n'%(mass,ab,ion2))
                 f.write('\n')
     
     def write_msp(self,
@@ -1240,7 +1244,7 @@ class EvalObj(LoadObj):
         """
         
         if type(inp)==list:
-            if comments != None: assert(len(inp)==len(comments)) # EDIT 230118
+            if comments != None: assert(len(inp)==len(comments))
             specdata = []
             specinfo = []
             last = 0
@@ -1250,9 +1254,9 @@ class EvalObj(LoadObj):
                 specdata.append(out[0])
                 specinfo.append(out[1])
                 # cecorr subtracts from the specinfo eV when writing Name entry in msp
-                if (print_every is not None): # EDIT 230122
+                if (print_every is not None):
                     if ((count%print_every)==0) & (count!=0):
-                        Com = None if comments==None else comments[last:count+1] # EDIT 230118
+                        Com = None if comments==None else comments[last:count+1]
                         self._write_msp(
                             specdata, specinfo, cecorr=cecorr, 
                             comment=Com, 
@@ -1266,7 +1270,7 @@ class EvalObj(LoadObj):
                                 comment=comments, fn=outfn
                 )
             else:
-                Com = None if comments==None else comments[last:count+1] # EDIT 230118
+                Com = None if comments==None else comments[last:count+1]
                 self._write_msp(specdata, specinfo, cecorr=cecorr, comment=Com, 
                                 fn=outfn+'_%d'%count
                 )
