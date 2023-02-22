@@ -521,7 +521,7 @@ class LoadObj:
         sort = Abs>mint
         return label, (masses[sort],Abs[sort],np.array(ions)[sort])
     
-    def FPs(self, filename, criteria):
+    def FPs(self, filename, criteria, return_labels=True):
         """
         Get file positions of spectrum labels in msp file
         
@@ -537,6 +537,7 @@ class LoadObj:
             end = f.tell()
             
             poss = []
+            labs = []
             f.seek(0)
             pos = 0
             while pos<end:
@@ -547,8 +548,10 @@ class LoadObj:
                     pos = f.tell()
                     line = f.readline()
                 if (line[:5]=='Name:') | (line[:5]=='NAME:'):
+                    label = line.split()[-1].strip()
                     if criteria==None:
                         poss.append(pos)
+                        labs.append(label)
                     else:
                         [seq,other] = line.split()[1].split('/')
                         otherspl = other.split('_') #TODO Non-standard label
@@ -559,10 +562,12 @@ class LoadObj:
                         nce = float(nce[3:])
                         if eval(criteria):
                             poss.append(pos)
+                            labs.append(label)
                 if line[:3]=='Num':
                     nmpks = int(line.split()[-1])
                     for _ in range(nmpks): _ = f.readline()
-        return np.array(poss)
+        if return_labels: return np.array(poss), np.array(labs)
+        else: return np.array(poss)
     
     def FPs_from_labels(self, query_labels, msp_filename):
         """
@@ -677,6 +682,17 @@ class EvalObj(LoadObj):
         else:
             self.dsetspred[dset]['Pos'] = np.loadtxt(self.dsetspred[dset]['pos'])
     
+    def search_poslabels(self, dset, pred=False):
+        typ = self.dsetspred[dset] if pred else self.dsets[dset]
+        filename = typ['msp']
+        pos,labels = self.FPs(
+            filename, 
+            '(len(seq)<=%d)&(charge<=%d)'%(self.D.seq_len,self.D.chlim[-1])
+        )
+        print("%s(pred=%s): Found %d labels"%(dset, str(pred), len(labels)))
+        typ['Pos'] = pos
+        typ['lab'] = labels
+    
     def add_labeldic(self, dset):
         """
         Get spectrum labels from dset and add it to member self.lab
@@ -687,45 +703,6 @@ class EvalObj(LoadObj):
             lab:I for I, lab in enumerate(
                 self.Pos2labels(self.dsets[dset]['msp'], self.dsets[dset]['pos']))
         }
-    
-    def add_prosit(self):
-        """
-        Place any code here for adding prosit libraries for comparison
-        """
-        
-        path = 'C:/Users/jsl6/Documents/Python Scripts/Pytorch/SpecPred/prosit/AIData6/'
-        print("fnms['mabps'] = '.../NISTmAb20190711_Libtest_20221021.msp'")
-        self.fnms['mabps'] = self.fnms['mab']
-        
-        print("fnmspred['mabps'] = '.../mab_PrositLib.msp'")
-        self.fnmspred['mabps']  = path+'predictions/PrositLib/mab_PrositLib.msp'
-        self.fnmspred['mab'] = self.fnmspred['mabps']
-        
-        print("fnms['valuniqps'] = '.../ValidUniq2022418_edit.msp'")
-        self.fnms['valuniqps'] = self.fnms['valuniq']
-        
-        print("fnmspred['valuniqps'] = '.../valuniq_PrositLib.msp'")
-        self.fnmspred['valuniqps'] = path+'predictions/PrositLib/valuniq_PrositLib.msp'
-        self.fnmspred['valuniq'] = self.fnmspred['valuniqps']
-        
-        # Have to search mab msp file by labels in prosit library. Criteria in
-        # FPs() will not work because prosit server treats '(ox)' as 4 in sequence
-        # length.
-        with open(self.fnmspred['mabps'], 'r') as f:
-            labels = [line.split()[1] for line in f.read().split('\n') if line[:5]=='Name:']
-        print("fpos['mabps'] = FPs_from_labels(labels, fnms['mab'])")
-        self.fpos['mabps'] = self.FPs_from_labels(labels, self.fnms['mabps'])
-        
-        print("fpospred['mabps'] = FPs(fnmspred['mabps'],...)")
-        self.fpospred['mabps'] = self.FPs(self.fnmspred['mabps'], None)
-        
-        with open(self.fnmspred['valuniqps'], 'r') as f:
-            labels = [line.split()[1] for line in f.read().split("\n") if line[:5]=='Name:']
-        print("fpos['valuniqps'] = FPs_from_labels(labels, fnms['valuniq'])")
-        self.fpos['valuniqps'] = self.FPs_from_labels(labels, self.fnms['valuniqps'])
-        
-        print("fpospred['valuniqps'] = FPs(fnmspred['valuniqps'],None)")
-        self.fpospred['valuniqps'] = self.FPs(self.fnmspred['valuniqps'], None)
     
     def lst2spec(self, mzlist, ablist):
         """
@@ -1277,7 +1254,7 @@ class EvalObj(LoadObj):
             assert inp in self.dsets.keys(), "inp not in dsets.keys()"
             if self.dsets[inp]['pos'] == None:
                 print("Searching for file positions in %s"%inp)
-                Pos = self.FPs(
+                Pos,labs = self.FPs(
                     self.dsets[inp]['msp'], 
                     '(len(seq)<=self.D.seq_len)&(charge<=self.D.chlim[-1])'
                 )
