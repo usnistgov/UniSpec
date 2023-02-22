@@ -4,6 +4,7 @@ model_config:
 model_ckpt: 
 stats_txt: input_data/ion_stats/ion_stats_train.txt
 enable_gpu: True
+search_empty_pos: False
 dsets:
    valuniq: 
       msp: C:/Users/joell/MyDatasets/MassSpec/AIData/Validation/ValidUniq2022418_2023J1_edit.msp
@@ -13,7 +14,7 @@ dsets:
       pos: 
    valcom:
       msp: C:/Users/joell/MyDatasets/MassSpec/AIData/Validation/ValidCom2022418_edit.msp
-      pos:
+      pos: 
 dsetspred:
    valuniqps:
       msp: predictions/valuniq_ps.msp

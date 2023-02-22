@@ -659,13 +659,14 @@ class EvalObj(LoadObj):
         # Filenames of experimental msp files
         self.dsets = config['dsets']
         for key in self.dsets.keys():
-            if self.dsets[key]['pos'] is not None: self.add_posarray(key)
+            if self.dsets[key]['pos'] is not None: 
+                self.load_posarray(key)
+            elif config['search_empty_pos']: self.search_poslabels(key, False)
         # Filenames of predicted msp files
         self.dsetspred = config['dsetspred']
         for key in self.dsetspred.keys():
-            if self.dsetspred[key]['pos'] is not None: self.add_posarray(key, pred=True)
-        # Labels
-        self.lab = {}
+            if self.dsetspred[key]['pos'] is not None: self.load_posarray(key, pred=True)
+            elif config['search_empty_pos']: self.search_poslabels(key, True)
         
         self.ppm = lambda theor, exp: 1e6*(exp[None] - theor[:,None])/theor[:,None]
         self.diff = lambda theor, exp: exp[None] - theor[:,None]
@@ -677,11 +678,21 @@ class EvalObj(LoadObj):
         # self.prosit_filter = np.zeros(len(dobj.dictionary), dtype='int') 
         # self.prosit_filter[proinds]=1
     
-    def add_posarray(self, dset, pred=False):
-        if pred==False:
-            self.dsets[dset]['Pos'] = np.loadtxt(self.dsets[dset]['pos'])
-        else:
-            self.dsetspred[dset]['Pos'] = np.loadtxt(self.dsetspred[dset]['pos'])
+    def load_posarray(self, dset, pred=False):
+        """
+        Load newline separated txt file of file positions for spectrum labels.
+        Also add labels to dsets.
+
+        Parameters
+        ----------
+        dset : Name of dataset (str)
+        pred : Predicted dataset or not?
+        """
+        typ = self.dsetspred[dset] if pred else self.dsets[dset] 
+    
+        typ['Pos'] = np.loadtxt(typ['pos'])
+        labels = self.Pos2labels(typ['msp'], typ['Pos'])
+        typ['lab'] = {a:b for a,b in zip(labels, typ['Pos'])}
     
     def search_poslabels(self, dset, pred=False):
         """
@@ -696,6 +707,23 @@ class EvalObj(LoadObj):
         print("%s(pred=%s): Found %d labels"%(dset, str(pred), len(labels)))
         typ['Pos'] = pos
         typ['lab'] = {a:b for a,b in zip(labels, pos)}
+    
+    def add_dset(self, name, msp_path, pos_path=None, search=False, pred=False):
+        """
+        Add dataset 
+
+        :param name: String, new name for the dataset
+        :param msp_path: Filepath to the msp file
+        :param pos_path: Filepath to the positions text file. If None, consider
+                         search=True.
+                         
+
+        """
+        typ = self.dsetspred if pred else self.dsets
+        assert os.path.exists(msp_path), "%s file doesn't exist"%msp_path
+        typ[name] = {'msp': msp_path, 'pos': pos_path}
+        if typ[name]['pos'] is not None: self.load_posarray(name, pred=pred)
+        if search: self.search_poslabels(name, pred=pred)
     
     def add_labeldic(self, dset):
         """
