@@ -631,9 +631,7 @@ class EvalObj(LoadObj):
                  config,
                  model_list, 
                  dobj, 
-                 enable_gpu=False,
-                 curpath='./',
-                 rawdatapath='C:/Users/jsl6/MyDatasets/MassSpec/'
+                 enable_gpu=False
                  ):
         self.model_list = model_list
         self.device = torch.device(
@@ -659,7 +657,7 @@ class EvalObj(LoadObj):
         # Filenames of predicted msp files
         self.dsetspred = config['dsetspred']
         for key in self.dsetspred.keys():
-            if self.dsetspred[key]['pos'] is not None: self.add_posarray(key)
+            if self.dsetspred[key]['pos'] is not None: self.add_posarray(key, pred=True)
         # Labels
         self.lab = {}
         
@@ -675,9 +673,9 @@ class EvalObj(LoadObj):
     
     def add_posarray(self, dset, pred=False):
         if pred==False:
-            self.dsets[dset]['Pos'] = np.loadtxt(self.dsets[dset]['pos']).astype(int)
+            self.dsets[dset]['Pos'] = np.loadtxt(self.dsets[dset]['pos'])
         else:
-            self.dsetspred[dset]['Pos'] = np.loadtxt(self.dsetspred[dset]['pos']).astype(int)
+            self.dsetspred[dset]['Pos'] = np.loadtxt(self.dsetspred[dset]['pos'])
     
     def add_labeldic(self, dset):
         """
@@ -1121,7 +1119,7 @@ class EvalObj(LoadObj):
         :return specdata: tuple of spectrum (masses, abundances, annotations)
         """
         fnm = self.dsetspred[dset]['msp'] if typ=='pred' else self.dsets[dset]['msp']
-        pos = self.dsetspred[dset]['pos'] if typ=='pred' else self.dsets[dset]['pos']
+        pos = self.dsetspred[dset]['Pos'] if typ=='pred' else self.dsets[dset]['Pos']
         with open(fnm, 'r') as fp:
             label, specdata = self.inp_spec_msp(pos[index], fp)
         return label, specdata
@@ -1195,7 +1193,7 @@ class EvalObj(LoadObj):
                 MW = Parent*charge # or just use the Parent mass?
                 
                 # Write header lines
-                label = '%s/%d_%s_%.1feV_NCE%.1f'%(seq,charge,mods,EV,NCE)
+                label = '%s/%d_%s_%.1feV_NCE%d'%(seq,charge,mods,EV,NCE)
                 f.write("Name: %s\n"%label)
                 f.write('MW: %.4f\n'%MW)
                 f.write('Comment: Single Pep=Tryptic Collision_energy=%.1f '%ev)
