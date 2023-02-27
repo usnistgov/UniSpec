@@ -658,15 +658,26 @@ class EvalObj(LoadObj):
         
         # Filenames of experimental msp files
         self.dsets = config['dsets']
-        for key in self.dsets.keys():
-            if self.dsets[key]['pos'] is not None: 
-                self.load_posarray(key)
-            elif config['search_empty_pos']: self.search_poslabels(key, False)
+        if self.dsets is not None: # You have the option to leave dsets empty
+            for key in self.dsets.keys():
+                if 'pos' in self.dsets[key]:
+                    # Be able to handle if pos: is empty
+                    if self.dsets[key]['pos'] is not None: 
+                        self.load_posarray(key)
+                    else: print("%s(pred=False): No pos array"%key)
+                elif config['search_empty_pos']: self.search_poslabels(key, False)
+                else: print("%s(pred=False): No pos array"%key)
+                    
         # Filenames of predicted msp files
         self.dsetspred = config['dsetspred']
-        for key in self.dsetspred.keys():
-            if self.dsetspred[key]['pos'] is not None: self.load_posarray(key, pred=True)
-            elif config['search_empty_pos']: self.search_poslabels(key, True)
+        if self.dsetspred is not None: # Option to leave dsevtspred empty
+            for key in self.dsetspred.keys():
+                if 'pos' in self.dsetspred[key]: 
+                    if self.dsetspred[key]['pos'] is not None: 
+                        self.load_posarray(key, pred=True)
+                    else: print("%s(pred=True): No pos array"%key)
+                elif config['search_empty_pos']: self.search_poslabels(key, True)
+                else: print("%s(pred=True): No pos array"%key)
         
         self.ppm = lambda theor, exp: 1e6*(exp[None] - theor[:,None])/theor[:,None]
         self.diff = lambda theor, exp: exp[None] - theor[:,None]
