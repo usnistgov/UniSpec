@@ -1299,19 +1299,13 @@ class EvalObj(LoadObj):
                 
         elif type(inp)==str:
             assert inp in self.dsets.keys(), "inp not in dsets.keys()"
-            if self.dsets[inp]['pos'] == None:
+            if 'Pos' not in self.dsets[inp]:# | (('pos' in self.dsets[inp]) &  == None:
                 print("Searching for file positions in %s"%inp)
-                Pos,labs = self.FPs(
-                    self.dsets[inp]['msp'], 
-                    '(len(seq)<=self.D.seq_len)&(charge<=self.D.chlim[-1])'
-                )
-                np.savetxt("./%s.pos"%inp, Pos)
-            else:
-                Pos = np.loadtxt(self.dsets[inp]['pos'])
+                self.search_poslabels(inp, False)
             # Get data on raw spectra
             # - cecorr adds to the label in inp_spec_msp
             with open(self.dsets[inp]['msp'], 'r') as fp:
-                out = [self.inp_spec_msp(pos, fp) for pos in Pos]
+                out = [self.inp_spec_msp(pos, fp) for pos in self.dsets[inp]['Pos']]
             labels = [o[0] for o in out]
             rawdata = [o[1] for o in out]
             comment = [];Specdata = [];Specinfo = [];CS=0
