@@ -664,7 +664,9 @@ class EvalObj(LoadObj):
                     # Be able to handle if pos: is empty
                     if self.dsets[key]['pos'] is not None: 
                         self.load_posarray(key)
-                    else: print("%s(pred=False): No pos array"%key)
+                    else: 
+                        if config['search_empty_pos']: self.search_poslabels(key, False)
+                        else:print("%s(pred=False): No pos array"%key)
                 elif config['search_empty_pos']: self.search_poslabels(key, False)
                 else: print("%s(pred=False): No pos array"%key)
                     
@@ -675,7 +677,9 @@ class EvalObj(LoadObj):
                 if 'pos' in self.dsetspred[key]: 
                     if self.dsetspred[key]['pos'] is not None: 
                         self.load_posarray(key, pred=True)
-                    else: print("%s(pred=True): No pos array"%key)
+                    else: 
+                        if config['search_empty_pos']: self.search_poslabels(key, True)
+                        else: print("%s(pred=True): No pos array"%key)
                 elif config['search_empty_pos']: self.search_poslabels(key, True)
                 else: print("%s(pred=True): No pos array"%key)
         
