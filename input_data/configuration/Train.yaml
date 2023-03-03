@@ -11,10 +11,10 @@ test:
    pos: ./input_data/txt_pos/fpostest.txt
    data: ./input_data/datasets/test.txt
 
-config: saved_models/model_config.yaml
-weights: saved_models/ckpt_step110000_0.9190
-restart: saved_models/opt.sd
-transfer: False
+config:
+weights:
+restart:
+transfer:
 
 model_config:
    embedsz: 256

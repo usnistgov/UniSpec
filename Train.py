@@ -23,7 +23,7 @@ from utils import DicObj
 D = DicObj(**dconfig)
 
 # Configuration dictionary
-if config['config'] != False:
+if config['config'] is not None:
     # Load model config
     with open(config['config'], 'r') as stream:
         model_config = yaml.safe_load(stream)
@@ -78,11 +78,11 @@ arrdims = len(model(L.input_from_str(trlab[0:1])[0], test=True)[1][0])
 model.to(device)
 
 # Load weights
-if config['weights'] != False:
+if config['weights'] is not None:
     model.load_state_dict(torch.load(config['weights']))
 
 # TRANSFER LEARNING
-if config['transfer'] != False:
+if config['transfer'] is not None:
     model.final = torch.nn.Sequential(torch.nn.Linear(512,D.dicsz), torch.nn.Sigmoid())
     for parm in model.parameters(): parm.requires_grad=False
     for parm in model.final.parameters(): parm.requires_grad=True
@@ -92,7 +92,7 @@ model.total_params()
 
 # Optimizer
 opt = torch.optim.Adam(model.parameters(), eval(config['lr']))
-if config['restart'] != False:
+if config['restart'] is not None:
     # loading optimizer state requires it to be initialized with model GPU parms
     opt.load_state_dict(torch.load(config['restart'], map_location=device))
 
@@ -117,8 +117,8 @@ with open("saved_models/ion_stats_train.txt", 'w') as file:
 
 CS = torch.nn.CosineSimilarity(dim=-1)
 def LossFunc(targ, pred, root=config['root_int']):
-    targ = L.root_intensity(targ, root=root) if root!=False else targ
-    pred = L.root_intensity(pred, root=root) if root!=False else pred
+    targ = L.root_intensity(targ, root=root) if root is not None else targ
+    pred = L.root_intensity(pred, root=root) if root is not None else pred
     cs = CS(targ, pred)
     return -cs
 
@@ -178,7 +178,7 @@ def train(epochs,
     print("Starting training for %d epochs"%epochs)
     tot = len(trlab)
     steps = np.minimum(
-        config['steps'] if config['steps']!=False else 1e10,
+        config['steps'] if config['steps'] is not None else 1e10,
         tot//batch_size if tot%batch_size==0 else tot//batch_size + 1
     )
     

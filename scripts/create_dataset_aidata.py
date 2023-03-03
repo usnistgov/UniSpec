@@ -10,10 +10,13 @@ collect_{} = True
 write_stats = True
 mode = 'ann in dictionary.keys()'
 collect_{} = False
+collect_others = True (optional)
+Set peptide_criteria
 3. Write dataset
 write = True
 write_stats = False
 combo = False
+collect_others = False
 collect_labels = True
 """
 import numpy as np 
