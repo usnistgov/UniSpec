@@ -13,6 +13,20 @@ with open("./input_data/configuration/predict.yaml", 'r') as stream:
 # Instantiate DicObj
 with open(config['dic_config'], 'r') as stream:
     dconfig = yaml.safe_load(stream)
+
+# Make some switches (if nec.) between config and dconfig
+dconfig['criteria_path'] = (config['criteria'] 
+                         if config['criteria'] is not None else 
+                         dconfig['criteria_path']
+)
+dconfig['mod_path'] = (config['mod_path'] 
+                         if config['mod_path'] is not None else 
+                         dconfig['mod_path']
+)
+dconfig['stats_path'] = (config['stats_txt'] 
+                         if config['stats_txt'] is not None else 
+                         dconfig['stats_path']
+)
 D = DicObj(**dconfig)
 
 # Instantiate model

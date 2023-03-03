@@ -1,33 +1,27 @@
-criteria: input_data/ion_stats/criteria.txt
-dic_config: input_data/configuration/dic.yaml
-model_config: 
-model_ckpt: 
-stats_txt: input_data/ion_stats/ion_stats_train.txt
+dic_config: saved_models/AIData7Model/dic.yaml
+model_config: saved_models/AIData7Model/model_config.yaml
+model_ckpt: saved_models/AIData7Model/test.ckpt
+criteria: saved_models/AIData7Model/criteria.txt
+mod_path: saved_models/AIData7Model/modifications.txt
+stats_txt: saved_models/AIData7Model/ion_stats_train.txt
 enable_gpu: True
-search_empty_pos: False
+search_empty_pos: True
 dsets:
    valuniq: 
       msp: C:/Users/joell/MyDatasets/MassSpec/AIData/Validation/ValidUniq2022418_2023J1_edit.msp
-      pos: 
    valsim:
       msp: C:/Users/joell/MyDatasets/MassSpec/AIData/Validation/ValidSim2022418_edit.msp
-      pos: 
    valcom:
       msp: C:/Users/joell/MyDatasets/MassSpec/AIData/Validation/ValidCom2022418_edit.msp
-      pos: 
 dsetspred:
    valuniqps:
       msp: predictions/valuniq_ps.msp
-      pos:
    valsimps:
       msp: predictions/valsim_ps.msp
-      pos:
    valcomps:
       msp: predictions/valcom_ps.msp
-      pos:
    valuniq:
       msp: predictions/valuniq_pred.msp
-      pos:
 mode: interactive
 write_msp:
    new: True
