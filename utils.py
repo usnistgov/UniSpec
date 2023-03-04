@@ -718,7 +718,7 @@ class EvalObj(LoadObj):
         """
         typ = self.dsetspred[dset] if pred else self.dsets[dset]
         filename = typ['msp']
-        pos,labels = self.FPs(filename, '(len(seq)<self.D.seq_len)&(charge<self.D.chlim[1])')
+        pos,labels = self.FPs(filename, '(len(seq)<=self.D.seq_len)&(charge<=self.D.chlim[1])')
         print("%s(pred=%s): Found %d labels"%(dset, str(pred), len(labels)))
         typ['Pos'] = pos
         typ['lab'] = {a:b for a,b in zip(labels, pos)}
