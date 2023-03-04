@@ -1,6 +1,6 @@
 dic_config: saved_models/AIData7Model/dic.yaml
 model_config: saved_models/AIData7Model/model_config.yaml
-model_ckpt: saved_models/AIData7Model/test.ckpt
+model_ckpt: saved_models/AIData7Model/ckpt_epoch16_0.9263
 criteria: saved_models/AIData7Model/criteria.txt
 mod_path: saved_models/AIData7Model/modifications.txt
 stats_txt: saved_models/AIData7Model/ion_stats_train.txt

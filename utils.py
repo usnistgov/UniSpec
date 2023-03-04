@@ -555,6 +555,8 @@ class LoadObj:
                         labs.append(label)
                     else:
                         [seq,other] = line.split()[1].split('/')
+                        if seq=='LLVALAVGCVR':
+                            print()
                         otherspl = other.split('_') #TODO Non-standard label
                         if len(otherspl)<4: otherspl+=['NCE0'] #TODO Non-standard label
                         [charge,mods,ev,nce] = otherspl #TODO Non-standard label
