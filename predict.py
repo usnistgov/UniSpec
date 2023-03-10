@@ -34,9 +34,7 @@ if config['model_config'] is not None:
     with open(config['model_config']) as stream:
         model_config = yaml.safe_load(stream)
     model1 = FlipyFlopy(**model_config, device=device)
-    model1.load_state_dict(
-        torch.load(config['model_ckpt'])
-    )
+    model1.load_state_dict(torch.load(config['model_ckpt']))
     mlist = [model1]
 else:
     mlist = []
@@ -72,4 +70,3 @@ if config['mode']=='write_msp':
         
         inp = config['write_msp']['dset']
         E.write_msp(inp, cecorr=cecorr, outfn=outfn)
-        

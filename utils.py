@@ -762,7 +762,40 @@ class EvalObj(LoadObj):
         """
         return np.concatenate([[mzlist],[ablist]],0)
     
-    def match(self, mz1, mz2, thr=[15,20,25], spl=[800,1200], typ='ppm'):
+    def LowMz(self, mz1, mz2, maxmz=300, thr=3e-3, thr2=4e-3, ions=[]):
+        """
+        Special criterion for very low mz, using absolute difference
+
+        Parameters
+        ----------
+        mz1 : mzs for predicted peaks
+        mz2 : mzs for experimental peaks
+        maxmz : Maximum m/z, below which criterion will be applied. 
+                The default is 300.
+        thr : Threshold for maximum absolute value difference. The default 
+              is 3e-3.
+        thr2 : Threshold for monoisotopic peaks. The default is 4e-3.
+
+        Returns
+        -------
+        Indices of true positives to remove
+
+        """
+        
+        lt = mz1<maxmz
+        eye = np.array([True if 'i' in ion else False for ion in ions])
+        diff = abs(self.diff(mz1, mz2))
+        S = np.where(lt&(eye==False))[0]
+        S2 = np.where(lt&eye)[0]
+        tp1 = np.sort(np.append(
+            S[np.where(diff[S].min(1)<thr)[0]], S2[np.where(diff[S2].min(1)<thr2)[0]]
+        ))
+        tp2 = diff[tp1].argmin(1)
+        
+        return (tp1,tp2)
+    
+    def match(self, mz1, mz2, thr=[15,20,25], spl=[800,1200], 
+              lowmz=False, pions=None, typ='ppm'):
         """
         Find matches between 2 peaks lists' m/z values
         - All non-matches will be classifiedfalse positives for mz1, and false 
@@ -778,6 +811,10 @@ class EvalObj(LoadObj):
         spl : m/z values on which to split dataset for different thresholds.
                Splits will be under first value, between middle values, and 
                over the top value. The default is '[800,1200]'.
+        lowmz : Boolean whether to apply LowMz criterion or not after matching.
+                 Note that between the thresholds and LowMz, this is an OR
+                 criterion, so only 1 needs to be satisfied. Default False.
+        pions : Array of predicted ion types. This is necessary for LowMz=True.
         typ : Distance metric between peaks to be matched. Use either absolute 
                difference ('abs'), or ppm. The default is 'ppm'.
 
@@ -788,6 +825,7 @@ class EvalObj(LoadObj):
         FN2 : False negatives indices for mz2 peaks
 
         """
+        
         delta = self.ppm(mz1,mz2) if typ=='ppm' else self.diff(mz1,mz2)
         TP1=[];TP2=[];FP1=[];FN2=[]
         for i,s in enumerate(thr):
@@ -805,10 +843,29 @@ class EvalObj(LoadObj):
             TP1.append(tp1);TP2.append(tp2);FP1.append(fp1);FN2.append(fn2)
         TP1 = np.concatenate(TP1);TP2 = np.concatenate(TP2)
         FP1 = np.concatenate(FP1);FN2 = np.concatenate(FN2)
+        
+        # Put any rejected matches, that satisfy the LowMz criterion, into the
+        # True positive lists, and remove from the False lists.
+        if lowmz:
+            # Get indices of matches satisfying LowMz criterion
+            ltp = self.LowMz(mz1, mz2, ions=pions)
+            # Iterate through that list
+            for tp1,tp2 in zip(*ltp):
+                # See if they were rejected by previous matching thresholds
+                if tp1 in FP1:
+                    FP1 = np.delete(FP1, np.where(FP1==tp1))
+                    TP1 = np.append(TP1, tp1)
+                    # exp list can have duplicates (before tiebreaker)
+                    TP2 = np.append(TP2, tp2)
+                if tp2 in FN2:
+                    FN2 = np.delete(FN2, np.where(FN2==tp2))
+            TP1 = np.sort(TP1)
+            TP2 = np.sort(TP2)
         return (TP1,TP2), FP1, FN2
     
-    def CosineScore(self, peaks1, peaks2, pions=None, rions=None, thr=[15,20,25],
-                    tbthr=2e-2, root=2, mxpks=400, remove_p=True, return_css=False):
+    def CosineScore(self, peaks1, peaks2, pions=None, rions=None, 
+                    thr=[15,20,25], tbthr=2e-2, root=2, remove_unk=True, 
+                    mxpks=400, remove_p=True, return_css=False):
         """
         Calculate the cosine similarity between 2 peak lists
         - sum(peaks1[TP]*peaks2[TP]) / norm(peaks1) / norm(peaks2)
@@ -818,11 +875,12 @@ class EvalObj(LoadObj):
         peaks1 : 2xN array; first row are m/z, second row are abundances
         peaks2 : 2xN array; first row are m/z, second row are abundances
         thr : Maximum absolute ppm between matched peaks.
-        tbthr : tiebreaker threshold
-        root : take the root of intensity vectors
-        mxpks : maximum number of intense experimental peaks to include
-        remove_p : remove p-ions from scoring
-        return_css : return arrays of TP,FP,FN indices that were included in
+        tbthr : Tiebreaker threshold
+        root : Take the root of intensity vectors
+        remove_unk : Remove unknown experimental peaks from calculation
+        mxpks : Maximum number of intense experimental peaks to include
+        remove_p : Remove p-ions from scoring
+        return_css : Return arrays of TP,FP,FN indices that were included in
                      score
         
         Returns
@@ -891,32 +949,6 @@ class EvalObj(LoadObj):
             assert(len(TP2)==len(uniqs))
             return peaks1, TP1, TP2#, global_dels
         
-        def LowMz(mz1, mz2, maxmz=300, thr=3e-3, thr2=4e-3, ions=[]):
-            """
-            Special criterion for very low mz, using absolute difference
-
-            Parameters
-            ----------
-            mz1 : mzs for predicted peaks
-            mz2 : mzs for experimental peaks
-            maxmz : Maximum m/z, below which criterion will be applied. 
-                    The default is 300.
-            thr : Threshold for maximum absolute value difference. The default 
-                  is 3e-3.
-            thr2 : Threshold for monoisotopic peaks. The default is 4e-3.
-
-            Returns
-            -------
-            Indices of true positives to remove
-
-            """
-            
-            lt = mz1<maxmz
-            diff = abs(mz1-mz2)[lt]
-            neg = np.array([d > thr2 if '+i' in ion else d > thr 
-                            for ion,d in zip(ions[lt],diff)])
-            return np.where(lt)[0][neg] if len(neg)>0 else neg
-        
         def root_intensity(ints, root=2):
             if root==2:
                 ints[ints>0] = np.sqrt(ints[ints>0])
@@ -924,26 +956,23 @@ class EvalObj(LoadObj):
                 ints[ints>0] = ints[ints>0]**(1/root)
             return ints
         
+        # Remove unknown experimental peaks
+        if remove_unk: peaks2 = peaks2[:,rions!='?']
         # Top {mxpks} experimental peaks
         if peaks2.shape[1]>mxpks:
             toppks = np.sort(np.argsort(peaks2[1])[-mxpks:])
             peaks2 = peaks2[:,toppks]
         else: toppks = np.arange(peaks2.shape[1])
         # Match peaks
-        TP, FP, FN = self.match(peaks1[0], peaks2[0], thr, typ='ppm')
+        TP, FP, FN = self.match(
+            peaks1[0], peaks2[0], thr, lowmz=True, pions=pions, typ='ppm'
+        )
         TP1,TP2 = TP # unpack TP so that TP1 and TP2 can be further operated on
         fp,fn = FP,FN # same for FP and FN
         TP = (TP1,toppks[TP2]) # Put it back together for output purposes (don't return operated TP)
         # Remove duplicate TP2's
         # - i.e. 2 very close predicted peaks that match the same experimental peak
         peaks1, TP1, TP2 = tiebreak(peaks1, peaks2, TP1, TP2, tbthr)
-        # Apply low m/z threshold
-        dels = LowMz(peaks1[0][TP1], peaks2[0][TP2], ions=pions[TP1])
-        if len(dels)>0:
-            fp = np.sort(np.append(fp, TP1[dels])) # add nonTPs to FP
-            fn = np.sort(np.append(fn, TP2[dels])) # add nonTPs to FN
-            TP1 = np.delete(TP1, dels) # remove TPs
-            TP2 = np.delete(TP2, dels) # remove TPs
         # Root intensities
         pred = root_intensity(peaks1[1], root=root)
         exp = root_intensity(peaks2[1], root=root)
