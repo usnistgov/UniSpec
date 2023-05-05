@@ -892,11 +892,13 @@ class EvalObj(LoadObj):
         """
         
         def RmP(ions, isp=False):
-            # Remove all p-ions
+            # Remove all p-ions without neutral losses
+            crit = "(ion[0]=='p') and ('-' not in ion)"
             return (
-                np.array([True if ion[0]=='p' else False for ion in ions]) if isp else
-                np.array([False if ion[0]=='p' else True for ion in ions])    
-                    ) if len(ions)>0 else []
+                np.array([True if eval(crit) else False for ion in ions]) 
+                if isp else
+                np.array([False if eval(crit) else True for ion in ions])    
+            ) if len(ions)>0 else []
         
         def tiebreak(peaks1, peaks2, TP1, TP2, thr):
             """

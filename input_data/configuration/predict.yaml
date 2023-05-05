@@ -10,9 +10,11 @@ dsets:
    valuniq: 
       msp: C:/Users/joell/MyDatasets/MassSpec/AIData/Validation/ValidUniq2022418_2023J1_edit.msp
    valsim:
-      msp: C:/Users/joell/MyDatasets/MassSpec/AIData/Validation/ValidSim2022418_edit.msp
+      msp: C:/Users/joell/MyDatasets/MassSpec/AIData/Validation/ValidSim2022418_mPhos_edit.msp
    valcom:
-      msp: C:/Users/joell/MyDatasets/MassSpec/AIData/Validation/ValidCom2022418_edit.msp
+      msp: C:/Users/joell/MyDatasets/MassSpec/AIData/Validation/ValidCom2022418_mPhos_edit.msp
+   test:
+      msp: C:/Users/joell/MyDatasets/MassSpec/AIData/Testing/TestUniq202277_2023J1.msp
 dsetspred:
    valuniqps:
       msp: predictions/valuniq_ps.msp
@@ -22,6 +24,8 @@ dsetspred:
       msp: predictions/valcom_ps.msp
    valuniq:
       msp: predictions/valuniq_pred.msp
+   test:
+      msp: predictions/test_pred.msp
 mode: interactive
 write_msp:
    new: True
