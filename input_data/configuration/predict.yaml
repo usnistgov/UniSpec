@@ -1,20 +1,20 @@
-dic_config: saved_models/AIData7Model/dic.yaml
-model_config: saved_models/AIData7Model/model_config.yaml
-model_ckpt: saved_models/AIData7Model/ckpt_epoch16_0.9263
-criteria: saved_models/AIData7Model/criteria.txt
-mod_path: saved_models/AIData7Model/modifications.txt
-stats_txt: saved_models/AIData7Model/ion_stats_train.txt
+dic_config: path/to/dic_yaml_file/dic.yaml
+model_config: path/to/model_config_yaml_file/model_config.yaml
+model_ckpt: path/to/pytorch_model_checkpoint/ckpt
+criteria: path/to/criteria_text_file/criteria.txt
+mod_path: path/to/modifications_text_file/modifications.txt
+stats_txt: path/to/ion_stats_text_file/ion_stats_train.txt
 enable_gpu: True
 search_empty_pos: True
 dsets:
    valuniq: 
-      msp: C:/Users/joell/MyDatasets/MassSpec/AIData/Validation/ValidUniq2022418_2023J1_edit.msp
+      msp: path/to/valuniq/ValidUniq2022418_2023J1_edit.msp
    valsim:
-      msp: C:/Users/joell/MyDatasets/MassSpec/AIData/Validation/ValidSim2022418_mPhos_edit.msp
+      msp: path/to/valsim/ValidSim2022418_mPhos_edit.msp
    valcom:
-      msp: C:/Users/joell/MyDatasets/MassSpec/AIData/Validation/ValidCom2022418_mPhos_edit.msp
+      msp: path/to/valcom/ValidCom2022418_mPhos_edit.msp
    test:
-      msp: C:/Users/joell/MyDatasets/MassSpec/AIData/Testing/TestUniq202277_2023J1.msp
+      msp: path/to/test/TestUniq202277_2023J1.msp
 dsetspred:
    valuniqps:
       msp: predictions/valuniq_ps.msp
@@ -29,9 +29,9 @@ dsetspred:
 mode: interactive
 write_msp:
    new: True
-   label_path: 'C:/Users/glapi/Documents/Machine Learning Docs/MassSpec/Pytorch/labels/HMPhos_labels16.txt'
+   label_path: 'path/to/labels/HMPhos_labels16.txt'
    dset: valcom
-   comments_path: 'C:/Users/glapi/Documents/Machine Learning Docs/MassSpec/Pytorch/labels/HMPhos_comments.txt'
+   comments_path: 'path/to/comments/HMPhos_comments.txt'
    cecorr: 0
    print_every: 2000
    outfn: "temp/aout"
