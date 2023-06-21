@@ -13,21 +13,21 @@ collect_tmt: True
 collect_labels: False
 collect_others: False
 # Directories and paths
-curdir: C:/Users/glapi/Documents/Python/Pytorch/MassSpec/Predire/
+curdir: full/path/to/current/directory/
 internaldir: input_data/ion_stats/internal_counts_positional.txt
 train_files:
-   - C:/Users/glapi/MyDatasets/MassSpec/AIData/Training/AItrain_EliteHuman_2022418v2_edit2.msp
-   - C:/Users/glapi/MyDatasets/MassSpec/AIData/Training/AItrain_LumosPhospho_2022418v2_2023J1_edit2.msp
-   - C:/Users/glapi/MyDatasets/MassSpec/AIData/Training/AItrain_LumosSynthetic_2022418v2_edit2.msp
-   - C:/Users/glapi/MyDatasets/MassSpec/AIData/Training/AItrain_QEHumanCho_2022418v2_edit2.msp
-   - C:/Users/glapi/MyDatasets/MassSpec/AIData/Training/AItrain_VelosHumanCho_2022418v2_edit2.msp
-   - C:/Users/glapi/MyDatasets/MassSpec/TMT/cptac3_tmt_selected_passed_best_1.msp
-   - C:/Users/glapi/MyDatasets/MassSpec/TMT/cptac3_tmt_selected_passed_best_2.msp
-   - C:/Users/glapi/MyDatasets/MassSpec/TMT/cptac3_tmt_selected_passed_best_3.msp
+   - path/to/training/file/AItrain_EliteHuman_2022418v2_edit2.msp
+   - path/to/training/file/AItrain_LumosPhospho_2022418v2_2023J1_edit2.msp
+   - path/to/training/file/AItrain_LumosSynthetic_2022418v2_edit2.msp
+   - path/to/training/file/AItrain_QEHumanCho_2022418v2_edit2.msp
+   - path/to/training/file/AItrain_VelosHumanCho_2022418v2_edit2.msp
+   - path/to/training/file/cptac3_tmt_selected_passed_best_1.msp
+   - path/to/training/file/cptac3_tmt_selected_passed_best_2.msp
+   - path/to/training/file/cptac3_tmt_selected_passed_best_3.msp
 val_files:
-   - C:/Users/glapi/MyDatasets/MassSpec/AIData/Validation/ValidUniq2022418_2023J1_edit.msp
+   - path/to/validation/file/ValidUniq2022418_2023J1_edit.msp
 test_files:
-   - C:/Users/glapi/MyDatasets/MassSpec/AIData/Validation/ValidUniq2022418_2023J1_edit.msp
+   - path/to/test/file/ValidUniq2022418_2023J1_edit.msp
 # Criteria for what peptides to include when write or write_stats
 peptide_criteria:
     min_length: 0
