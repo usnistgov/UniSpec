@@ -7,7 +7,7 @@ Created on Wed Jan 25 12:13:37 2023
 Create labels and comments from tsv files that Qian sends me 
 """
 
-filepath = "C:/Users/glapi/Downloads/"
+filepath = "/path/to/location/of/files/"
 
 fnm_labels = 'HMPhos20230221_labelsNCE16-40.tsv'
 fnm_prot = 'uniprotHM20191015_protlabels.tsv'
@@ -47,8 +47,8 @@ labels = [
     ) for m in range(len(B['seq']))
 ]
 
-with open("C:/Users/glapi/Desktop/HMPhos_labels16.txt",'w') as f:
+with open("path/to/labels_textfile/HMPhos_labels16.txt",'w') as f:
     f.write("\n".join(labels))
-# with open("C:/Users/jsl6/Documents/Paper3/library_labels/uniprot_library/uniprot_comments_40.txt",'w') as f:
+# with open("path/to/comments_textfile/uniprot_comments_40.txt",'w') as f:
 #     f.write("\n".join(comments))
     
