@@ -14,6 +14,7 @@ and run predictions immediately.
 Installation
 -
 Dependencies: Pytorch
+
 run git clone https://github.com/usnistgov/UniSpec
 
 Raw data
