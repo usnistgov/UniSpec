@@ -11,6 +11,11 @@ The code allows for the reconstruction of the entire project, from raw data to t
 Alternatively, if you have the checkpoint of a previously trained model, you can clone the repository directly
 and run predictions immediately.
 
+Installation
+-
+Dependencies: Pytorch
+run git clone https://github.com/usnistgov/UniSpec
+
 Raw data
 --------
 In order to turn raw mass spectral data from .msp files into streamlined datasets for model training, you must use
