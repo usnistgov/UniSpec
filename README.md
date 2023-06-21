@@ -13,7 +13,7 @@ and run predictions immediately.
 
 Installation
 -
-git clone https://github.com/usnistgov/UniSpec
+- git clone https://github.com/usnistgov/UniSpec
 
 Raw data
 --------
@@ -30,7 +30,7 @@ Training a model
 ----------------
 Training can be run with the command: 
 
-python Train.py 
+- python Train.py 
 
 The configuration settings for the model, data, and training procedure are set in the yaml file 
 input_data/configuration/Train.yaml.
@@ -39,7 +39,7 @@ Predictions of evaluation
 -------------------------
 A trained model can be deployed for predictions by running the command:
 
-python predict.py
+- python predict.py
 
 The configuration settings for what/how you want to create predictions are set in the yaml file 
 input_data/configuration/predict.yaml.
