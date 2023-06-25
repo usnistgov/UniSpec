@@ -11,6 +11,12 @@ The code allows for the reconstruction of the entire project, from raw data to t
 Alternatively, if you have the checkpoint of a previously trained model, you can clone the repository directly
 and run predictions immediately.
 
+## Contact Us ##
+
+If you have any inquiries regarding the repository, please don't hesitate to reach out to the NIST UniSpec team. You can contact them directly at qian.dong@nist.gov, joellapin@comcast.net, and xinjian.yan@nist.gov. Alternatively, you can also post an issue in the repository itself.
+
+The UniSpec team consists of associates and members of the Mass Spectrometry Data Center, Biomolecular Measurement Division of the Material Measurement Laboratory.
+
 Installation
 -
 - git clone https://github.com/usnistgov/UniSpec
@@ -43,3 +49,11 @@ A trained model can be deployed for predictions by running the command:
 
 The configuration settings for what/how you want to create predictions are set in the yaml file 
 input_data/configuration/predict.yaml.
+
+Contributing
+------------
+
+At NIST, we provide NIST projects as a public service, and we highly value feedback and contributions from the community. If you have any contributions to make, we encourage you to actively participate in the development of this project. You can do so by forking this project, opening a pull request (PR), or initiating a discussion.
+
+The authors of this project are eager to foster further innovations in the deep learning prediction of peptide fragmentation spectra, and your contributions can play a vital role in advancing this effort.
+
