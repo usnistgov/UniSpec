@@ -3,6 +3,6 @@ chlim:
 - 8
 criteria_path: ./input_data/ion_stats/criteria.txt
 mass_path: ./input_data/masses.txt
-mod_path: saved_models/AIData7Model/modifications.txt
+mod_path: saved_models/unispec23/modifications.txt
 seq_len: 40
 stats_path: ./input_data/ion_stats/ion_stats_train.txt
