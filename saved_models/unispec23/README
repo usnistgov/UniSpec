@@ -1,0 +1,5 @@
+This directory contains the trained model from our paper:
+
+UniSpec: A Deep Learning Approach for Predicting Energy-Sensitive Peptide Tandem Mass Spectra and Generating Proteomics-Wide In-Silico Spectral Libraries
+
+Included are the model parameters and  all accessory files for reproducability.
