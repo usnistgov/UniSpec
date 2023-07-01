@@ -1,0 +1,9 @@
+occurs>100
+"IQB" not in ion
+"IVD" not in ion
+"IRE" not in ion
+"IRB" not in ion
+"ICA" not in ion
+"IWB" not in ion
+"IRD" not in ion
+((len(ion.split("+")[0].split("-")[0])==3)&(ion[0]=="I")&("+" in ion))==False

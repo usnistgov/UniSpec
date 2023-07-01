@@ -1,0 +1,12 @@
+CEembed: false
+blocks: 9
+embedsz: 256
+filtlast: 512
+head:
+- 16
+- 16
+- 64
+in_ch: 38
+out_dim: 7919
+seq_len: 40
+units: None
