@@ -86,7 +86,6 @@ class DicObj:
                 'TMT129C':129.1378,'TMT130N':130.1348,'TMT130C':130.1411,'TMT131':131.1382
             }
         
-        self.dictionary = {}
         criteria = (
             open(criteria_path,"r").read().split("\n") 
             if os.path.exists(criteria_path) else ['occurs>0']
@@ -123,6 +122,7 @@ class DicObj:
         :param fn: path to ion statistics file
         
         """
+        self.dictionary = {}
         
         count=0
         for line in open(fn,'r'):
