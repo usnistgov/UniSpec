@@ -11,6 +11,59 @@ import torch
 from difflib import get_close_matches as gcm
 import matplotlib.pyplot as plt
 
+def NCE2eV(nce, mz, charge, instrument):
+    if instrument==('q_exactive' or 'q_exactive_hfx' or 'elite'):
+        if charge==2: cf=0.9
+        elif charge==3: cf=0.85
+        elif charge==4: cf=0.8
+        elif charge==5: cf=0.75
+        else: RuntimeError('Charge not supported')
+    if instrument==('q_exactive' or 'q_exactive_hfx'):
+        correction = -5.7
+        ev = nce*mz/500*cf + correction
+    elif instrument=='elite':
+        ev = nce*mz*500*cf
+    elif instrument=='velos':
+        if charge==2:
+            ev = (0.0015*nce-0.0004)*mz
+        elif charge==3:
+            ev = (0.0012*nce-0.0006)*mz
+        elif charge==4:
+            ev = (0.0008*nce+0.0061)*mz
+        else:
+            RuntimeError('Charge not supported')
+    elif instrument=='lumos':
+        if charge==1:
+            crosspoint = (-0.4873*nce+0.1931) / (-0.00094*nce+5.11e-4)
+            if mz < crosspoint:
+                ev = (9.85e-4*nce+5.89e-4)*mz + (0.4049*nce+5.7521)
+            else:
+                ev = (1.9203e-3*nce+7.84e-5)*mz-8.24e-2*nce+5.9452
+        elif charge==2:
+            crosspoint = 0.41064*nce/(7.836e-4*nce-2.704e-6)
+            if mz < crosspoint:
+                ev = (8.544e-4*nce-5.135e-5)*mz+0.3383*nce+5.9981
+            else:
+                ev = (1.638e-3*nce-5.4054e-5)*mz-0.072344*nce+5.998
+        elif charge==3:
+            crosspoint = (0.3802*nce-0.3261) / (7.31e-4*nce-9.9e-4)
+            if mz < crosspoint:
+                ev = (8.09e-4*nce+1.011e-3)*mz+0.3129*nce+5.6731
+            else:
+                ev = (1.54e-3*nce+2e-5)*mz-0.0673*nce+5.9992
+        elif charge>=4:
+            crosspoint = (0.3083*nce+0.9073) / (5.61e-4*nce+2.143e-3)
+            if mz < crosspoint:
+                ev = (8.79e-4*nce+2.183e-3)*mz+0.245*nce+6.917
+            else:
+                ev = (1.44e-3*nce-4e-5)*mz-0.0633*nce+6.0097
+        else:
+            RuntimeError('Charge not supported')
+    else:
+        RuntimeError('instrument type not found')
+    
+    return ev
+
 class DicObj:
     def __init__(self,
                  seq_len = 40,
@@ -556,7 +609,8 @@ class LoadObj:
                     else:
                         [seq,other] = line.split()[1].split('/')
                         otherspl = other.split('_') #TODO Non-standard label
-                        if len(otherspl)<4: otherspl+=['NCE0'] #TODO Non-standard label
+                        if len(otherspl)==1: otherspl+=['0', '0eV', 'NCE0']
+                        # if len(otherspl)<4: otherspl+=['NCE0'] #TODO Non-standard label
                         [charge,mods,ev,nce] = otherspl #TODO Non-standard label
                         charge = int(charge)
                         ev=float(ev[:-2])
