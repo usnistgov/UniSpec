@@ -47,11 +47,28 @@ if config['mode']=='write_msp':
     cecorr = config['write_msp']['cecorr']
     outfn = config['write_msp']['outfn']
     
-    if config['write_msp']['new']==True:
+    # Leave 'label_type' blank if you want to write the msp in 'dset'
+    if config['write_msp']['label_type'] is not None:
         
-        assert os.path.exists(config['write_msp']['label_path']), 'label path does not exist'
-        labels = open(config['write_msp']['label_path']).read().split("\n")
+        # Make sure label path exists
+        assert os.path.exists(config['write_msp']['label_path']), ( 
+            'label path does not exist'
+        )
+        from utils import Labeler
+        labeler = Labeler(D)
+        # Two ways we can do this
+        #  1. label_type: noev. Input file has space separated format: 
+        #     seq charge mod_string nce  
+        if config['write_msp']['label_type'].lower() == 'noev':
+            labels = labeler.IncompleteLabels(config['write_msp']['label_path'])
+        # 2. label_type: complete. Input file has newline separated list of 
+        #    complete labels: {seq}/{charge}_{mods}_{ev}eV_NCE{nce}
+        elif config['write_msp']['label_type'].lower() == 'complete':
+            labels = labeler.CompleteLabels(config['write_msp']['label_path'])
+        else:
+            RuntimeError("Choose for label_type 'noev' or 'complete'")
         
+        # Make sure comments path exists
         if config['write_msp']['comments_path'] != None:
             assert os.path.exists(config['write_msp']['comments_path']), (
                 'comments path does not exist')

@@ -12,6 +12,10 @@ from difflib import get_close_matches as gcm
 import matplotlib.pyplot as plt
 
 def NCE2eV(nce, mz, charge, instrument='lumos'):
+    """
+    Allowed instrument types (230807):
+    - q_exactive, q_exactive_hfx, elite, velos, lumos
+    """
     if instrument.lower()==('q_exactive' or 'q_exactive_hfx' or 'elite'):
         if charge==2: cf=0.9
         elif charge==3: cf=0.85
@@ -63,6 +67,36 @@ def NCE2eV(nce, mz, charge, instrument='lumos'):
         RuntimeError('instrument type not found')
     
     return ev
+
+class Labeler:
+    def __init__(self, D):
+        self.D = D
+        self.nce2ev = NCE2eV
+        
+    def IncompleteLabels(self, txt_fn):
+        """
+        Allowed modifications (230807):
+        - Acetyl, Carbamidomethyl, Gln->pyro-Glu, Glu->pyro-Glu, Oxidation, 
+          Phospho, Pyro-carbamidomethyl
+        """
+        labels_ = [a.split() for a in open(txt_fn).read().split("\n")]
+        labels = []
+        for data in labels_:
+            seq = data[0]
+            charge = int(data[1])
+            mods = data[2]
+            nce = int(data[3])
+            
+            mz = self.D.calcmass(seq, charge, mods, 'p') / charge
+            ev = NCE2eV(nce, mz, charge)
+            
+            label = '%s/%d_%s_%.1feV_NCE%d'%(seq,charge,mods,ev,nce)
+            labels.append(label)
+        
+        return labels
+    
+    def CompleteLabels(self, txt_fn):
+        return open(txt_fn).read().split("\n")
 
 class DicObj:
     def __init__(self,

@@ -1,3 +1,0 @@
-usdir: full/path/to/UniSpec/
-txtpath: full/path/to/sequence/data/seqs.txt
-outpath: input_data/labels.txt
