@@ -11,19 +11,19 @@ import torch
 from difflib import get_close_matches as gcm
 import matplotlib.pyplot as plt
 
-def NCE2eV(nce, mz, charge, instrument):
-    if instrument==('q_exactive' or 'q_exactive_hfx' or 'elite'):
+def NCE2eV(nce, mz, charge, instrument='lumos'):
+    if instrument.lower()==('q_exactive' or 'q_exactive_hfx' or 'elite'):
         if charge==2: cf=0.9
         elif charge==3: cf=0.85
         elif charge==4: cf=0.8
         elif charge==5: cf=0.75
         else: RuntimeError('Charge not supported')
-    if instrument==('q_exactive' or 'q_exactive_hfx'):
+    if instrument.lower()==('q_exactive' or 'q_exactive_hfx'):
         correction = -5.7
         ev = nce*mz/500*cf + correction
-    elif instrument=='elite':
+    elif instrument.lower()=='elite':
         ev = nce*mz*500*cf
-    elif instrument=='velos':
+    elif instrument.lower()=='velos':
         if charge==2:
             ev = (0.0015*nce-0.0004)*mz
         elif charge==3:
@@ -32,7 +32,7 @@ def NCE2eV(nce, mz, charge, instrument):
             ev = (0.0008*nce+0.0061)*mz
         else:
             RuntimeError('Charge not supported')
-    elif instrument=='lumos':
+    elif instrument.lower()=='lumos':
         if charge==1:
             crosspoint = (-0.4873*nce+0.1931) / (-0.00094*nce+5.11e-4)
             if mz < crosspoint:
@@ -177,17 +177,18 @@ class DicObj:
         """
         self.dictionary = {}
         
-        count=0
-        for line in open(fn,'r'):
-            # Make sure this agrees with pattern of input file
-            [ion,occurs,meanint] = line.split()
-            # convert entries
-            occurs=int(occurs);meanint=float(meanint)
-            if eval("(" + ")&(".join(criteria) + ")"):
-                self.dictionary[ion] = count
-                count+=1
-        self.revdictionary = {b:a for a,b in self.dictionary.items()}
-        self.dicsz = len(self.dictionary)
+        if os.path.exists(fn):
+            count=0
+            for line in open(fn,'r'):
+                # Make sure this agrees with pattern of input file
+                [ion,occurs,meanint] = line.split()
+                # convert entries
+                occurs=int(occurs);meanint=float(meanint)
+                if eval("(" + ")&(".join(criteria) + ")"):
+                    self.dictionary[ion] = count
+                    count+=1
+            self.revdictionary = {b:a for a,b in self.dictionary.items()}
+            self.dicsz = len(self.dictionary)
     
     def create_filter(self, criteria):
         """
