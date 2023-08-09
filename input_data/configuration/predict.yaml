@@ -28,7 +28,7 @@ dsetspred:
       msp: predictions/test_pred.msp
 mode: interactive
 write_msp:
-   new: True
+   label_type: 
    label_path: 'path/to/labels/HMPhos_labels16.txt'
    dset: valcom
    comments_path: 'path/to/comments/HMPhos_comments.txt'

@@ -761,7 +761,7 @@ class EvalObj(LoadObj):
                     
         # Filenames of predicted msp files
         self.dsetspred = config['dsetspred']
-        if self.dsetspred is not None: # Option to leave dsevtspred empty
+        if self.dsetspred is not None: # Option to leave dsetspred empty
             for key in self.dsetspred.keys():
                 if 'pos' in self.dsetspred[key]: 
                     if self.dsetspred[key]['pos'] is not None: 
@@ -796,7 +796,11 @@ class EvalObj(LoadObj):
     
         typ['Pos'] = np.loadtxt(typ['pos'])
         labels = self.Pos2labels(typ['msp'], typ['Pos'])
-        typ['lab'] = {a:b for a,b in zip(labels, typ['Pos'])}
+        typ['lab'] = {
+            a:{'ind': i, 'pos': b} 
+            for i, (a,b) in enumerate(zip(labels, typ['Pos']))
+        }
+        print("%s(pred=%s): Found %d labels"%(dset, str(pred), len(labels)))
     
     def search_poslabels(self, dset, pred=False):
         """
@@ -810,7 +814,10 @@ class EvalObj(LoadObj):
         pos,labels = self.FPs(filename, '(len(seq)<=self.D.seq_len)&(charge<=self.D.chlim[1])')
         print("%s(pred=%s): Found %d labels"%(dset, str(pred), len(labels)))
         typ['Pos'] = pos
-        typ['lab'] = {a:b for a,b in zip(labels, pos)}
+        typ['lab'] = {
+            a:{'ind': i, 'pos': b} 
+            for i, (a,b) in enumerate(zip(labels, typ['Pos']))
+        }
     
     def add_dset(self, name, msp_path, pos_path=None, search=False, pred=False):
         """
@@ -1521,7 +1528,7 @@ class EvalObj(LoadObj):
             # Use e.g. mab, valuniq, etc.
             assert 'lab' in self.dsetspred[predset].keys()
             label_match = gcm(label, self.dsetspred[predset]['lab'].keys())[0]
-            pos = self.dsetspred[predset]['lab'][label_match]
+            pos = self.dsetspred[predset]['lab'][label_match]['pos']
             
             with open(self.dsetspred[predset]['msp'],'r') as g:
                 label_, (pmz,pab,pions) = self.inp_spec_msp(pos, g)
