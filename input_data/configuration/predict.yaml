@@ -35,3 +35,9 @@ write_msp:
    cecorr: 0
    print_every: 2000
    outfn: "temp/aout"
+calc_cs:
+   predset: test
+   rawset: test
+   map_path:
+   CSkwargs:
+   outfn: "test.cs"

@@ -10,6 +10,8 @@ import numpy as np
 import torch
 from difflib import get_close_matches as gcm
 import matplotlib.pyplot as plt
+from tqdm import tqdm
+import pandas as pd
 
 def NCE2eV(nce, mz, charge, instrument='lumos'):
     """
@@ -574,13 +576,17 @@ class LoadObj:
     def inp_spec_msp(self, 
                      fstart, 
                      fp,
-                     mint=1e-10):
+                     mint=1e-10,
+                     sortmz=False
+                     ):
         """
         Input spectrum from MSP file. Works on 1 spectrum at a time.
         
         :param fstart: File starting positions for "Name:..." labels in msp.
         :param fp: file pointer to msp file
         :param mint: minimum intensity for including peaks
+        :param sortmz: sort the spectrum by mz, ascending. Necessary depending
+                       on 
         
         :output label: spectrum label
         :output #2: tuple of (masses, intensities, ions)
@@ -602,7 +608,10 @@ class LoadObj:
             line = fp.readline()
             # print(npks, count, line);count+=1
             spl = '\t' if '\t' in line else ' '
-            [mass,ab,ion] = line.split(spl)
+            split_line = line.split(spl)
+            if len(split_line)==2:
+                split_line += ['"?"']
+            [mass,ab,ion] = split_line
             masses[m] = float(mass)
             Abs[m] = float(ab)
             ions.append(ion.strip()[1:-1].split(',')[0])
@@ -638,21 +647,28 @@ class LoadObj:
                     line = f.readline()
                 if (line[:5]=='Name:') | (line[:5]=='NAME:'):
                     label = line.split()[-1].strip()
-                    if criteria==None:
+                    # if raw scans for rescoring, I expect the label to be e.g.
+                    # Name: Scan=0000
+                    # else then parse the label if criteria is not None
+                    if len(label.split('_'))==1:
                         poss.append(pos)
                         labs.append(label)
                     else:
-                        [seq,other] = line.split()[1].split('/')
-                        otherspl = other.split('_') #TODO Non-standard label
-                        if len(otherspl)==1: otherspl+=['0', '0eV', 'NCE0']
-                        # if len(otherspl)<4: otherspl+=['NCE0'] #TODO Non-standard label
-                        [charge,mods,ev,nce] = otherspl #TODO Non-standard label
-                        charge = int(charge)
-                        ev=float(ev[:-2])
-                        nce = float(nce[3:])
-                        if eval(criteria):
+                        if criteria==None:
                             poss.append(pos)
                             labs.append(label)
+                        else:
+                            [seq,other] = line.split()[1].split('/')
+                            otherspl = other.split('_') #TODO Non-standard label
+                            if len(otherspl)==1: otherspl+=['0', '0eV', 'NCE0']
+                            # if len(otherspl)<4: otherspl+=['NCE0'] #TODO Non-standard label
+                            [charge,mods,ev,nce] = otherspl #TODO Non-standard label
+                            charge = int(charge)
+                            ev=float(ev[:-2])
+                            nce = float(nce[3:])
+                            if eval(criteria):
+                                poss.append(pos)
+                                labs.append(label)
                 if line[:3]=='Num':
                     nmpks = int(line.split()[-1])
                     for _ in range(nmpks): _ = f.readline()
@@ -1398,6 +1414,8 @@ class EvalObj(LoadObj):
             specinfo = []
             last = 0
             for count, label in enumerate(inp):
+                # This if statement is exception for blank lines in label list
+                if label=='': continue
                 print("\r%d/%d"%(count+1, len(inp)), end='')
                 out = self.predict_spectrum_new(self.add_ce(label, cecorr))
                 specdata.append(out[0])
@@ -1462,6 +1480,77 @@ class EvalObj(LoadObj):
                             comment=comment, fn=outfn
             )
             print("\nmean(CS) = %.3f"%(CS/a))
+    
+    def CalcCSdset(self, 
+                   pred_set, 
+                   raw_set, 
+                   Map=None, 
+                   out_fn=None,
+                   **cskwargs
+                   ):
+        """
+        Calculate cosine scores between corresponding labels in pre-loaded 
+        predicted dataset and raw dataset. 
+        
+        :param pred_set: Name of dataset in dsetspred.
+        :param raw_set: Name of dataset in dsets.
+        :param Map: Mapping between labels in 2 datasets. If not None, should
+                    be a numpy string array with 2 columns of labels, from 
+                    respective datasets, that are to be scored against each other.
+                    - If None, then will run through all labels of pred_set
+        :param out_fn: Path of output file, if desired. If specified, will save 
+                       dataframe as {out_fn} tsv file.
+        :param **cskwargs: Any desired keyword arguments for the CosineScore 
+                           function.
+        
+        :output df: Dataframe containing keys 'pred', 'raw', and 'cosine_score'
+        """
+        
+        out = {'pred:'+pred_set: [], 'raw:'+raw_set: [], 'cosine_score': []}
+        
+        iterable = ( 
+            self.dsetspred[pred_set]['lab'].keys() 
+            if Map==None else
+            [m[0] for m in Map]
+        )
+        
+        skipped_labels = 0
+        for i, label1 in enumerate(tqdm(iterable)):
+        
+            label2 = label1 if Map==None else Map[i][1]
+            
+            if label2 not in self.dsets[raw_set]['lab'].keys():
+                skipped_labels += 1
+                continue
+            
+            out['pred:'+pred_set].append(label1)
+            out['raw:'+raw_set].append(label2)
+            
+            ind_pred = self.dsetspred[pred_set]['lab'][label1]['ind']
+            ind_raw = self.dsets[raw_set]['lab'][label2]['ind']
+            
+            pred_spec = self._inp_spec(ind_pred, pred_set, 'pred')[-1]
+            raw_spec = self._inp_spec(ind_raw, raw_set, 'raw')[-1]
+            
+            s = np.argsort(pred_spec[0])
+            pred_peaks = self.lst2spec(*pred_spec[:2, s])
+            pred_ions = pred_spec[-1][s]
+            raw_peaks = self.lst2spec(*raw_spec[:2])
+            raw_ions = raw_spec[-1]
+            
+            cs, diffs = self.CosineScore(
+                pred_peaks, raw_peaks, pions=pred_ions, rions=raw_ions,
+                **cskwargs
+            )
+            out['cosine_score'].append(cs)
+        
+        df = pd.DataFrame(out)
+        if out_fn is not None:
+            df.to_csv(out_fn, sep='\t')
+        
+        print("Number of skipped labels: %d"%skipped_labels)
+        
+        return df
             
     def mirrorplot(self,
                    inp=0,

@@ -87,30 +87,24 @@ if config['mode']=='write_msp':
         
         inp = config['write_msp']['dset']
         E.write_msp(inp, cecorr=cecorr, outfn=outfn)
-
-label = 'MQNTLYLSLTR/2_0_31.6eV_NCE25'
-
-import numpy as np
-# by=True
-# dset='ftms35'
-# dsetps='%sps'%dset
-psions = []
-i = 1
-for ion in ['b', 'y']:
-    for ext in np.arange(1,30,1):
-        for ch in ['', '^2', '^3']:
-            psions.append('%s%s%s'%(ion, str(ext), ch))
-            i+=1
-
-rawspec = E._inp_spec(E.dsets['ftms25']['lab'][label]['ind'], 'ftms25', 'raw')[-1]
-boo = [ion.split('/')[0] in psions for ion in rawspec[-1]]
-rawspec = [spec[boo] for spec in rawspec]
-raw_peaks = E.lst2spec(rawspec[0], rawspec[1])
-pred = E._inp_spec(E.dsetspred['ftms25']['lab'][label]['ind'], 'ftms25', 'pred')[-1]
-boo = [ion.split('/')[0] in psions for ion in pred[-1]]
-pred = [spec[boo] for spec in pred]
-pred_peaks = E.lst2spec(pred[0], pred[1])
-cs, diffs = E.CosineScore(
-    pred_peaks, raw_peaks, pions=pred[-1], rions=rawspec[-1]
-)
-
+elif config['mode']=='calc_cs':
+    # Load in Label_pred - Label_raw map, if appplicable
+    if config['calc_cs']['Map'] is not None:
+        Map = np.loadtxt(config['calc_cs']['Map'])
+        assert Map.shape[1]==2, Map doesn't have 2 columns
+    else:
+        Map = None
+    
+    cskwargs = (
+       {} 
+       if config['calc_cs']['CSkwargs']==None else 
+       config['calc_cs']['CSkwargs']
+    )
+        
+    _ = E.CalcCSdset(
+        config['calc_cs']['predset'], 
+        config['calc_cs']['rawset'], 
+        Map = Map,
+        out_fn = config['calc_cs']['outfn']
+        **cskwargs
+    )
