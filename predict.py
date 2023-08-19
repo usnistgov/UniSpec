@@ -3,6 +3,7 @@ from models import FlipyFlopy
 from utils import DicObj, EvalObj
 import yaml
 import os
+import numpy as np
 import matplotlib.pyplot as plt
 plt.close('all')
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -91,7 +92,7 @@ elif config['mode']=='calc_cs':
     # Load in Label_pred - Label_raw map, if appplicable
     if config['calc_cs']['Map'] is not None:
         Map = np.loadtxt(config['calc_cs']['Map'])
-        assert Map.shape[1]==2, Map doesn't have 2 columns
+        assert Map.shape[1]==2, "Map doesn't have 2 columns"
     else:
         Map = None
     
