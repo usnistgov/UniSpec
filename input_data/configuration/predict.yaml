@@ -1,9 +1,9 @@
-dic_config: path/to/dic_yaml_file/dic.yaml
-model_config: path/to/model_config_yaml_file/model_config.yaml
-model_ckpt: path/to/pytorch_model_checkpoint/ckpt
-criteria: path/to/criteria_text_file/criteria.txt
-mod_path: path/to/modifications_text_file/modifications.txt
-stats_txt: path/to/ion_stats_text_file/ion_stats_train.txt
+dic_config: saved_models/unispec23/dic.yaml
+model_config: saved_models/unispec23/model_config.yaml
+model_ckpt: saved_models/unispec23/ckpt_epoch16_0.9263
+criteria: saved_models/unispec23/criteria.txt
+mod_path: saved_models/unispec23/modifications.txt
+stats_txt: saved_models/unispec23/ion_stats_train.txt
 enable_gpu: True
 search_empty_pos: True
 dsets:

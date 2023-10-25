@@ -394,6 +394,7 @@ class LoadObj:
         output = torch.zeros((self.channels, self.D.seq_len), dtype=torch.float32)
         
         # Sequence
+        assert seq <= self.D.seq_len, "Exceeded maximum peptide length."
         output[:len(self.D.dic),:len(seq)] = torch.nn.functional.one_hot(
             torch.tensor([self.D.dic[o] for o in seq], dtype=torch.long),
             len(self.D.dic)
@@ -768,7 +769,14 @@ class EvalObj(LoadObj):
                 if 'pos' in self.dsets[key]:
                     # Be able to handle if pos: is empty
                     if self.dsets[key]['pos'] is not None: 
-                        self.load_posarray(key)
+                        if not os.path.exists(self.dsets[key]['pos']):
+                            print("Specified pos array path not found", end='')
+                            print(" for dsets|%s"%key)
+                            if config['search_empty_pos']: 
+                                print("Will search for file positions")
+                                self.search_poslabels(key, True)
+                        else:
+                            self.load_posarray(key)
                     else: 
                         if config['search_empty_pos']: self.search_poslabels(key, False)
                         else:print("%s(pred=False): No pos array"%key)
@@ -781,7 +789,14 @@ class EvalObj(LoadObj):
             for key in self.dsetspred.keys():
                 if 'pos' in self.dsetspred[key]: 
                     if self.dsetspred[key]['pos'] is not None: 
-                        self.load_posarray(key, pred=True)
+                        if not os.path.exists(self.dsetspred[key]['pos']):
+                            print("Specified pos array path not found", end='')
+                            print(" for dsetspred|%s"%key)
+                            if config['search_empty_pos']: 
+                                print("Will search for file positions")
+                                self.search_poslabels(key, True)
+                        else:
+                            self.load_posarray(key, pred=True)
                     else: 
                         if config['search_empty_pos']: self.search_poslabels(key, True)
                         else: print("%s(pred=True): No pos array"%key)
@@ -810,7 +825,7 @@ class EvalObj(LoadObj):
         """
         typ = self.dsetspred[dset] if pred else self.dsets[dset] 
     
-        typ['Pos'] = np.loadtxt(typ['pos'])
+        typ['Pos'] = np.loadtxt(typ['pos']).astype('int')
         labels = self.Pos2labels(typ['msp'], typ['Pos'])
         typ['lab'] = {
             a:{'ind': i, 'pos': b} 
