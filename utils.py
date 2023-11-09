@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 """
 Created on Mon Sep 26 08:18:11 2022
-
 @author: jsl6
+Modified NCE2eV on Wed Nov 9th 2023
+@author: qd
 """
 import re
 import os
@@ -25,8 +26,7 @@ def NCE2eV(nce, mz, charge, instrument='lumos'):
         elif charge==5: cf=0.75
         else: RuntimeError('Charge not supported')
     if instrument.lower()==('q_exactive' or 'q_exactive_hfx'):
-        correction = -5.7
-        ev = nce*mz/500*cf + correction
+        ev = nce*mz/500*cf
     elif instrument.lower()=='elite':
         ev = nce*mz*500*cf
     elif instrument.lower()=='velos':
@@ -42,27 +42,27 @@ def NCE2eV(nce, mz, charge, instrument='lumos'):
         if charge==1:
             crosspoint = (-0.4873*nce+0.1931) / (-0.00094*nce+5.11e-4)
             if mz < crosspoint:
-                ev = (9.85e-4*nce+5.89e-4)*mz + (0.4049*nce+5.7521)
+                ev = (9.85e-4*nce+5.89e-4)*mz + (0.4049*nce+5.752)
             else:
-                ev = (1.9203e-3*nce+7.84e-5)*mz-8.24e-2*nce+5.9452
+                ev = (1.920e-3*nce+7.84e-5)*mz-8.24e-2*nce+5.945
         elif charge==2:
-            crosspoint = 0.41064*nce/(7.836e-4*nce-2.704e-6)
+            crosspoint = 0.4106*nce/(7.836e-4*nce-2.704e-6)
             if mz < crosspoint:
-                ev = (8.544e-4*nce-5.135e-5)*mz+0.3383*nce+5.9981
+                ev = (8.544e-4*nce-5.135e-5)*mz+0.3383*nce+5.998
             else:
-                ev = (1.638e-3*nce-5.4054e-5)*mz-0.072344*nce+5.998
+                ev = (1.638e-3*nce-5.405e-5)*mz-0.07234*nce+5.998
         elif charge==3:
-            crosspoint = (0.3802*nce-0.3261) / (7.31e-4*nce-9.9e-4)
+            crosspoint = (-0.3802*nce+0.3261) / (-7.3e-4*nce+1.027e-3)
             if mz < crosspoint:
-                ev = (8.09e-4*nce+1.011e-3)*mz+0.3129*nce+5.6731
+                ev = (8.09e-4*nce+1.011e-3)*mz+0.3129*nce+5.673
             else:
-                ev = (1.54e-3*nce+2e-5)*mz-0.0673*nce+5.9992
+                ev = (1.540e-3*nce-1.62e-5)*mz-0.0673*nce+5.999
         elif charge>=4:
             crosspoint = (0.3083*nce+0.9073) / (5.61e-4*nce+2.143e-3)
             if mz < crosspoint:
-                ev = (8.79e-4*nce+2.183e-3)*mz+0.245*nce+6.917
+                ev = (8.79e-4*nce-2.183e-3)*mz+0.245*nce+6.917
             else:
-                ev = (1.44e-3*nce-4e-5)*mz-0.0633*nce+6.0097
+                ev = (1.44e-3*nce-4e-5)*mz-0.0633*nce+6.010
         else:
             RuntimeError('Charge not supported')
     else:
