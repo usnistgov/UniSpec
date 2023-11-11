@@ -39,5 +39,6 @@ calc_cs:
    predset: test
    rawset: test
    map_path:
+   closest_match: False
    CSkwargs:
    outfn: "test.cs"

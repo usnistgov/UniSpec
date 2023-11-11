@@ -1499,7 +1499,8 @@ class EvalObj(LoadObj):
     def CalcCSdset(self, 
                    pred_set, 
                    raw_set, 
-                   Map=None, 
+                   Map=None,
+                   closest_match=False,
                    out_fn=None,
                    **cskwargs
                    ):
@@ -1535,8 +1536,11 @@ class EvalObj(LoadObj):
             label2 = label1 if Map==None else Map[i][1]
             
             if label2 not in self.dsets[raw_set]['lab'].keys():
-                skipped_labels += 1
-                continue
+                if closest match:
+                    label2 = gcm(label, self.dsets[raw_set]['lab'])[0]
+                else:
+                    skipped_labels += 1
+                    continue
             
             out['pred:'+pred_set].append(label1)
             out['raw:'+raw_set].append(label2)
@@ -1563,7 +1567,8 @@ class EvalObj(LoadObj):
         if out_fn is not None:
             df.to_csv(out_fn, sep='\t')
         
-        print("Number of skipped labels: %d"%skipped_labels)
+        if closest_match==False:
+            print("Number of skipped labels: %d"%skipped_labels)
         
         return df
             
