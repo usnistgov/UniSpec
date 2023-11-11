@@ -8,8 +8,8 @@ Proteomics-Wide In-Silico Spectral Libraries (2023).
 https://www.biorxiv.org/content/10.1101/2023.06.14.544947v1
 
 The code allows for the reconstruction of the entire project, from raw data to trained model to predicted libraries. 
-Alternatively, if you have the checkpoint of a previously trained model, you can clone the repository directly
-and run predictions immediately.
+Alternatively, you can use the trained model weights that are included in this repository (saved_models/unispec23).
+The predict.yaml file paths are preset for this model.
 
 ## Contact Us ##
 
