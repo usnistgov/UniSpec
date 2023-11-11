@@ -394,7 +394,7 @@ class LoadObj:
         output = torch.zeros((self.channels, self.D.seq_len), dtype=torch.float32)
         
         # Sequence
-        assert len(seq) <= self.D.seq_len, "Exceeded maximum peptide length."
+        assert seq <= self.D.seq_len, "Exceeded maximum peptide length."
         output[:len(self.D.dic),:len(seq)] = torch.nn.functional.one_hot(
             torch.tensor([self.D.dic[o] for o in seq], dtype=torch.long),
             len(self.D.dic)
