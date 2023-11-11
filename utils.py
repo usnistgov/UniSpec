@@ -1548,7 +1548,7 @@ class EvalObj(LoadObj):
             raw_spec = self._inp_spec(ind_raw, raw_set, 'raw')[-1]
             
             s = np.argsort(pred_spec[0])
-            pred_peaks = self.lst2spec(*pred_spec[:2, s])
+            pred_peaks = self.lst2spec(*pred_spec[:2])[:,s]
             pred_ions = pred_spec[-1][s]
             raw_peaks = self.lst2spec(*raw_spec[:2])
             raw_ions = raw_spec[-1]
