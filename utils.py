@@ -1499,7 +1499,7 @@ class EvalObj(LoadObj):
     def CalcCSdset(self, 
                    pred_set, 
                    raw_set, 
-                   Map=None, 
+                   map_path=None, 
                    out_fn=None,
                    **cskwargs
                    ):
@@ -1509,10 +1509,11 @@ class EvalObj(LoadObj):
         
         :param pred_set: Name of dataset in dsetspred.
         :param raw_set: Name of dataset in dsets.
-        :param Map: Mapping between labels in 2 datasets. If not None, should
-                    be a numpy string array with 2 columns of labels, from 
-                    respective datasets, that are to be scored against each other.
-                    - If None, then will run through all labels of pred_set
+        :param map_path: Path to file providing the mapping between labels in 2
+                         datasets. If not None, should be a numpy string array 
+                         with 2 columns of labels, from respective datasets, 
+                         that are to be scored against each other.
+                         - If None, then will run through all labels of pred_set
         :param out_fn: Path of output file, if desired. If specified, will save 
                        dataframe as {out_fn} tsv file.
         :param **cskwargs: Any desired keyword arguments for the CosineScore 
@@ -1523,6 +1524,11 @@ class EvalObj(LoadObj):
         
         out = {'pred:'+pred_set: [], 'raw:'+raw_set: [], 'cosine_score': []}
         
+        Map = (
+            [line.strip().split() for line in open(map_path)] 
+            if map_path is not None else 
+            None
+        )
         iterable = ( 
             self.dsetspred[pred_set]['lab'].keys() 
             if Map==None else
