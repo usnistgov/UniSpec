@@ -106,6 +106,7 @@ elif config['mode']=='calc_cs':
         config['calc_cs']['predset'], 
         config['calc_cs']['rawset'], 
         Map = Map,
+        closest_match=config['calc_cs']['closest_match'],
         out_fn = config['calc_cs']['outfn'],
         **cskwargs
     )

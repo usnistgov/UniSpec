@@ -1536,8 +1536,8 @@ class EvalObj(LoadObj):
             label2 = label1 if Map==None else Map[i][1]
             
             if label2 not in self.dsets[raw_set]['lab'].keys():
-                if closest match:
-                    label2 = gcm(label, self.dsets[raw_set]['lab'])[0]
+                if closest_match:
+                    label2 = gcm(label2, self.dsets[raw_set]['lab'])[0]
                 else:
                     skipped_labels += 1
                     continue
