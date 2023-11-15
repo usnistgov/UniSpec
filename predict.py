@@ -91,7 +91,7 @@ if config['mode']=='write_msp':
 elif config['mode']=='calc_cs':
     # Load in Label_pred - Label_raw map, if appplicable
     if config['calc_cs']['map_path'] is not None:
-        Map = np.loadtxt(config['calc_cs']['Map'])
+        Map = np.loadtxt(config['calc_cs']['map_path'])
         assert Map.shape[1]==2, "Map doesn't have 2 columns"
     else:
         Map = None
