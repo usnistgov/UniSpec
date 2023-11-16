@@ -1526,14 +1526,14 @@ class EvalObj(LoadObj):
         
         iterable = ( 
             self.dsetspred[pred_set]['lab'].keys() 
-            if Map==None else
+            if type(Map) != np.ndarray else
             [m[0] for m in Map]
         )
         
         skipped_labels = 0
         for i, label1 in enumerate(tqdm(iterable)):
         
-            label2 = label1 if Map==None else Map[i][1]
+            label2 = label1 if type(Map) != np.ndarray else Map[i][1]
             
             if label2 not in self.dsets[raw_set]['lab'].keys():
                 if closest_match:
