@@ -3,9 +3,7 @@ Implementation of UniSpec, a deep learning model for predicting full fragment io
 
 This repository contains code for the implementation of UniSpec, from the publication:
 
-UniSpec: A Deep Learning Approach for Predicting Energy-Sensitive Peptide Tandem Mass Spectra and Generating 
-Proteomics-Wide In-Silico Spectral Libraries (2023).
-https://www.biorxiv.org/content/10.1101/2023.06.14.544947v1
+UniSpec: Deep Learning for Predicting the Full Range of Peptide Fragment Ion Series to Enhance the Proteomics Data Analysis Workflow, Cite this: Anal. Chem. 2024, 96, 7, 2783–2790 https://pubs.acs.org/doi/10.1021/acs.analchem.3c02321
 
 The code allows for the reconstruction of the entire project, from raw data to trained model to predicted libraries. 
 Alternatively, you can use the trained model weights that are included in this repository (saved_models/unispec23).
