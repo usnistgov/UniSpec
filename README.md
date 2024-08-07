@@ -19,6 +19,11 @@ Installation
 -
 - git clone https://github.com/usnistgov/UniSpec
 
+Environment
+-
+conda env create --file=environment.yml
+conda install pytorch torchvision torchaudio pytorch-cuda=11.8 -c pytorch -c nvidia
+
 Raw data
 --------
 In order to turn raw mass spectral data from .msp files into streamlined datasets for model training, you must use

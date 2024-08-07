@@ -1,0 +1,10 @@
+name: unispec
+dependencies:
+   - python=3.12
+   - ipython
+   - datasets
+   - matplotlib
+   - pyarrow
+   - tqdm
+   - pandas
+   - git

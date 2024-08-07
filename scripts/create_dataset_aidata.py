@@ -25,6 +25,10 @@ import os
 import re
 import yaml
 from time import time
+import pandas as pd
+import pyarrow as pa
+import pyarrow.parquet as pq
+from itertools import cycle
 
 with open('./input_options/create_dataset.yaml','r') as stream:
     config = yaml.safe_load(stream)
@@ -124,12 +128,13 @@ else:
     """Alternatively I could create a dictionary beforehand and read it in from
     file here. This could be useful if I get rid of all the ion types that are
     absent from the combination of train/val/test sets."""
-    from utils import DicObj
+    from utils import DicObj, LoadObj
     with open(curdir+"./input_data/configuration/dic.yaml", 'r') as stream:
         dconfig = yaml.safe_load(stream)
     dconfig['criteria_path'] = curdir+'input_data/ion_stats/criteria.txt'
     dconfig['stats_path'] = curdir+'input_data/ion_stats/ion_stats_train.txt'
     D = DicObj(**dconfig)
+    L = LoadObj(D)
     dictionary = D.dictionary
 revdictionary = {n:m for m,n in dictionary.items()}
 
@@ -145,9 +150,11 @@ Files = (
 
 if config['write']:
     if not os.path.exists(curdir+'input_data/datasets/'): os.makedirs(curdir+'input_data/datasets/')
-    g = open(curdir+"input_data/datasets/%s.txt"%config['files'], 'w')
-    if not os.path.exists(curdir+'input_data/txt_pos/'): os.makedirs(curdir+'input_data/txt_pos/')
-    h = open(curdir+"input_data/txt_pos/fpos%s.txt"%config['files'], 'w')
+    schema_defined = False
+    parquet_file_base = curdir+"input_data/datasets/%s"%config['files']
+    #g = open(curdir+"input_data/datasets/%s"%parquet_file, 'w')
+    #if not os.path.exists(curdir+'input_data/txt_pos/'): os.makedirs(curdir+'input_data/txt_pos/')
+    #h = open(curdir+"input_data/txt_pos/fpos%s.txt"%config['files'], 'w')
 neutlst=[];modlst=[];intlst=[];immlst=[];labels=[];tmtlst=[]
 LENGTHS = [];CHARGES = [];ENERGIES = [];others={}
 dic_counter = np.zeros((len(dictionary),3))
@@ -250,6 +257,7 @@ for file in Files:
                 # Write a streamlined dataset
                 # - if statements limit the types of peptides I use
                 if config['write'] | config['write_stats']:
+                    
                     mx = np.max(Ints) # intensities scaled between 0-1
                     modbool = [True if i in pep['modifications'] else False 
                                for i in mod_types]
@@ -263,16 +271,39 @@ for file in Files:
                         (False not in modbool)
                     ):
                         labels.append(label.strip())
-                        if config['write']: h.write("%d "%g.tell())
-                        if config['write']: g.write("NAME: %s|%s|%d|%.1f|%d\n"%(
-                                seq,Mods,charge,ce,len(DIC)))
-                        for a,b in DIC.items():
-                            if config['write']: g.write('%s %d %.4f %.4f\n'%(
-                                    a,dictionary[a],b[0],b[1]/mx
-                                    ))
+                        
+                        if config['write']:
+                            (seq, mods, charge, nce, ev) = L.str2dat(labels[-1])
+                            mod_pos, mod_types = L.extract_mods(mods)
+                            mz_array = np.zeros((len(D.dictionary))).astype(np.float32)
+                            intensity_array = np.zeros((len(D.dictionary))).astype(np.float32)
+                        for ion,b in DIC.items():
+                            if config['write']:
+                                mz_array[D.dictionary[ion]] = b[0]
+                                intensity_array[D.dictionary[ion]] = b[1] / mx
                             if config['write_stats']:
-                                dic_counter[dictionary[a],0] += 1 # counts
-                                dic_counter[dictionary[a],1] += b[1]/mx # sum intensity
+                                dic_counter[dictionary[ion],0] += 1 # counts
+                                dic_counter[dictionary[ion],1] += b[1]/mx # sum intensity
+                        if config['write']:
+                            df = pd.DataFrame({
+                                'sequence': [seq],
+                                'mod_pos': [mod_pos],
+                                'mod_type': [mod_types],
+                                'charge': [np.int32(charge)],
+                                'nce': [np.float32(nce)],
+                                'ev': [np.float32(ev)],
+                                'mz': [mz_array],
+                                'ab': [intensity_array],
+                            })
+                            table = pa.Table.from_pandas(df, preserve_index=False)
+                            if not schema_defined:
+                                writers = [
+                                    pq.ParquetWriter(parquet_file_base + '_%d.parquet'%z, table.schema, compression='snappy')
+                                    for z in range(int(config['shards']))
+                                ]
+                                schema_defined = True
+                                cyc = cycle(range(int(config['shards'])))
+                            writers[next(cyc)].write_table(table)
         print('\r\033[K%d s'%(time()-startclock))
 
 ###############################################################################
@@ -317,9 +348,7 @@ if config['write_stats']:
                 dic_counter[:,1] / np.maximum(dic_counter[:,0],1)
         ):
             f.write('%22s %8d %.4f\n'%(a,b,c))
-if config['write']: g.close()
-if config['write']: h.close()
+if config['write']: 
+    for writer in writers:
+        writer.close()
 print("\n%d s"%(time()-Startclock))
-
-# import os
-# os.system('shutdown /s')

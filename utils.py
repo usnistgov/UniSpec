@@ -13,6 +13,8 @@ from difflib import get_close_matches as gcm
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 import pandas as pd
+from datasets import load_dataset
+from torch.utils.data import DataLoader
 
 def NCE2eV(nce, mz, charge, instrument='lumos'):
     """
@@ -347,10 +349,108 @@ class DicObj:
             return False
 
 class LoadObj:
-    def __init__(self, dobj, embed=False):
+    def __init__(self,
+        dataset_path: dict,
+        #dictionary_path: str,
+        dobj: DicObj,
+        batch_size: int=100,
+        embed: bool=False,
+        num_workers: int=0,
+    ):
         self.D = dobj
         self.embed = embed
         self.channels = dobj.seq_channels if embed else dobj.channels
+        
+        # Dataset
+        dataset = load_dataset(
+            'parquet',
+            data_files=dataset_path,
+            streaming=True
+        )
+        
+        # Filter for length
+        dataset = dataset.filter(
+            self.filter_charge_and_length
+        )
+        
+        # Map to format outputs
+        dataset = dataset.map(
+            self.map_fn,
+            remove_columns=['sequence', 'charge', 'mod_pos', 'mod_type', 'nce', 'ev', 'mz', 'ab']
+        )
+        
+        # Shuffle dataset
+        dataset['train'] = dataset['train'].shuffle(buffer_size=10000)
+        
+        self.dataset = dataset
+        
+        def build_dataloader(dataset, batch_size, num_workers):
+            return DataLoader(
+                dataset,
+                batch_size=batch_size,
+                num_workers=num_workers,
+                collate_fn=self.collate_fn,
+                persistent_workers=True,
+            )
+        
+        # Dataloaders
+        num_workers = min(self.dataset['train'].n_shards, num_workers)
+        self.dataloader = {
+            'train': build_dataloader(dataset['train'], batch_size, num_workers),
+            #'val':   self.build_dataloader(dataset['val']  , batch_size, 0),
+            #'test':  self.build_dataloader(dataset['test'] , batch_size, 0),
+        }
+    
+    """
+    Windows multiprocessing prevents using lambda functions for map and filter
+    
+    AttributeError: Can't pickle local object 'LoaderHF.__init__.<locals>.<lambda>'
+    
+    See this message board: https://discuss.pytorch.org/t/cant-pickle-local-object-dataloader-init-locals-lambda/31857
+    """
+    
+    def filter_charge_and_length(self, example):
+        boolean = (
+            (example['charge'] >= self.D.chlim[0]) &
+            (example['charge'] <= self.D.chlim[1]) &
+            (len(example['sequence']) <= self.D.seq_len)
+        )
+        return boolean
+        
+    def map_fn(self, example):
+        input_tensor = torch.zeros((self.channels, self.D.seq_len), dtype=torch.float32)
+        # Sequence
+        seq = example['sequence']
+        assert len(seq) <= self.D.seq_len, "Exceeded maximum peptide length."
+        input_tensor[:len(self.D.dic), :len(seq)] = self.sequence_one_hot(seq)
+        input_tensor[len(self.D.dic)-1, len(seq):] = 1.
+        # PTMs
+        input_tensor[len(self.D.dic)] = 1.
+        if example['mod_type'][0] != 'null':
+            for pos, modtyp in zip(example['mod_pos'], example['mod_type']):
+                input_tensor[self.D.mdic[modtyp], int(pos)] = 1.
+                input_tensor[len(self.D.dic), int(pos)] = 0.
+        # Charge
+        charge = example['charge']
+        input_tensor[self.D.seq_channels+charge-1] = 1.
+        # eV
+        input_tensor[-1, :] = example['ev'] / 100.
+        
+        example['input_tensor'] = input_tensor
+        example['target_tensor'] = torch.tensor(example['ab'], dtype=torch.float32)
+        
+        return example
+
+    def collate_fn(self, batch_list):
+        inp = torch.stack([m['input_tensor'] for m in batch_list])
+        out = torch.stack([m['target_tensor'] for m in batch_list])
+        return inp, out
+
+    def sequence_one_hot(self, sequence):
+        return torch.nn.functional.one_hot(
+            torch.tensor([self.D.dic[o] for o in sequence], dtype=torch.long),
+            len(self.D.dic)
+        ).T
     
     def str2dat(self, string):
         """
@@ -375,6 +475,22 @@ class LoadObj:
         #     modlst = [(int(m[0]),m[-1]) for m in modlst]
         # else: modlst = []
         return (seq,mods,int(charge),float(ev[:-2]),float(nce[3:]))
+    
+    def extract_mods(self, mod_string):
+        Mstart = mod_string.find('(') if mod_string!='0' else 1
+        modamt = int(mod_string[0:Mstart])
+        Pos = []
+        Modtyp = []
+        if modamt>0:
+            hold = [re.sub('[()]', '', n) for n in mod_string[Mstart:].split(")(")]
+            for n in hold:
+                [pos,aa,modtyp] = n.split(',')
+                Pos.append(int(pos))
+                Modtyp.append(modtyp)
+        else:
+            Pos.append(-1)
+            Modtyp.append('null')
+        return Pos, Modtyp
     
     def inptsr(self, info):
         """
@@ -1672,3 +1788,55 @@ class EvalObj(LoadObj):
         if save:
             fig.savefig("./mirroplot.jpg")
             plt.close()
+
+if __name__ == "__main__":
+
+    import yaml
+
+    with open("./input_data/configuration/Train.yaml", 'r') as stream:
+        config = yaml.safe_load(stream)
+
+    with open("./input_data/configuration/dic.yaml", 'r') as stream:
+        dconfig = yaml.safe_load(stream)
+
+    D = DicObj(**dconfig)
+
+    if config['config'] is not None:
+        # Load model config
+        with open(config['config'], 'r') as stream:
+            model_config = yaml.safe_load(stream)
+    else:
+        channels = D.seq_channels if config['model_config']['CEembed'] else D.channels
+        model_config = {
+            'in_ch': channels,
+            'seq_len': D.seq_len,
+            'out_dim': len(D.dictionary),
+            **config['model_config']
+        }
+
+    L = LoadObj(
+        {'train': "input_data/datasets/*train*"},
+        dobj=D, 
+        embed=False,#model_config['CEembed'],
+        batch_size=100,
+        num_workers=4,
+    )
+
+    #A = next(iter(L.dataset['train']))
+    #print(A)
+
+    from time import time
+    breakpt = 100
+    Start = time()
+    for i, batch in enumerate(L.dataloader['train']):
+        print("\r%d"%i, end='')
+        if i==0:
+            start = time()
+            delay = start - Start
+        if i == breakpt:
+            break
+    end = time()
+    time_per_sample = (breakpt*100) / (end-start)
+    print()
+    print(f"{delay} second delay")
+    print(time_per_sample, "samples per second")
