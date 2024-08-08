@@ -1,4 +1,4 @@
-files: val
+files: test
 write: True
 write_stats: False
 mode: 'ann in dictionary.keys()'
@@ -27,7 +27,7 @@ train_files:
 val_files:
    - C:/Users/glapi/MyDatasets/MassSpec/AIData/Validation/ValidUniq2022418_2023J1_edit.msp
 test_files:
-   - C:/Users/glapi/MyDatasets/MassSpec/AIData/Testing/ValidUniq2022418_2023J1_edit.msp
+   - C:/Users/glapi/MyDatasets/MassSpec/AIData/Testing/TestUniq202277_2023J1.msp
 # Criteria for what peptides to include when write or write_stats
 peptide_criteria:
     min_length: 0
@@ -46,4 +46,4 @@ peptide_criteria:
        - Phospho
        - Pyro-carbamidomethyl
        #- TMT6plex
-shards: 4
+shards: 8

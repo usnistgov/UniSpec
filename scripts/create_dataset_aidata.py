@@ -34,6 +34,7 @@ with open('./input_options/create_dataset.yaml','r') as stream:
     config = yaml.safe_load(stream)
 
 pep = config['peptide_criteria']
+shards = int(config['shards']) if config['files'] == 'train' else 1
 
 curdir = config['curdir']
 sys.path.append(config['curdir'])
@@ -275,12 +276,14 @@ for file in Files:
                         if config['write']:
                             (seq, mods, charge, nce, ev) = L.str2dat(labels[-1])
                             mod_pos, mod_types = L.extract_mods(mods)
-                            mz_array = np.zeros((len(D.dictionary))).astype(np.float32)
-                            intensity_array = np.zeros((len(D.dictionary))).astype(np.float32)
+                            mz_array = []#np.zeros((len(D.dictionary))).astype(np.float32)
+                            ion_array = []
+                            intensity_array = []#np.zeros((len(D.dictionary))).astype(np.float32)
                         for ion,b in DIC.items():
                             if config['write']:
-                                mz_array[D.dictionary[ion]] = b[0]
-                                intensity_array[D.dictionary[ion]] = b[1] / mx
+                                mz_array.append(b[0])#[D.dictionary[ion]] = b[0]
+                                ion_array.append(ion)
+                                intensity_array.append(b[1])#[D.dictionary[ion]] = b[1] / mx
                             if config['write_stats']:
                                 dic_counter[dictionary[ion],0] += 1 # counts
                                 dic_counter[dictionary[ion],1] += b[1]/mx # sum intensity
@@ -292,17 +295,18 @@ for file in Files:
                                 'charge': [np.int32(charge)],
                                 'nce': [np.float32(nce)],
                                 'ev': [np.float32(ev)],
-                                'mz': [mz_array],
-                                'ab': [intensity_array],
+                                #'mz': [np.array(mz_array, dtype=np.float32)],
+                                'ion': [np.array(ion_array, dtype=np.object_)],
+                                'ab': [np.array(intensity_array, dtype=np.float32)],
                             })
                             table = pa.Table.from_pandas(df, preserve_index=False)
                             if not schema_defined:
                                 writers = [
                                     pq.ParquetWriter(parquet_file_base + '_%d.parquet'%z, table.schema, compression='snappy')
-                                    for z in range(int(config['shards']))
+                                    for z in range(shards)
                                 ]
                                 schema_defined = True
-                                cyc = cycle(range(int(config['shards'])))
+                                cyc = cycle(range(shards))
                             writers[next(cyc)].write_table(table)
         print('\r\033[K%d s'%(time()-startclock))
 

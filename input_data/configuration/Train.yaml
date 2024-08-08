@@ -25,7 +25,7 @@ model_config:
       - 64
    units: None
    filtlast: 512
-   CEembed: True
+   CEembed: False
    learn_ffn_embed: False
 
 root_int: 2

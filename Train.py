@@ -41,32 +41,43 @@ else:
 ###############################################################################
 
 from utils import LoadObj
-L = LoadObj(D, embed=model_config['CEembed'])
+L = LoadObj(
+    dataset_path = {
+        'train': "input_data/datasets/*train*", 
+        'val': "input_data/datasets/*val*",
+        'test': "input_data/datasets/*test*",
+    },
+    dobj=D, 
+    embed=False,#model_config['CEembed'],
+    batch_size=100,
+    num_workers=2,
+    remove_columns=['ab','ion','ev','nce','charge','sequence'],
+)
 
 # Training
-fpostr = np.loadtxt(config['train']['pos'])
-ftr = open(config['train']['data'], "r")
+fpostr = None#np.loadtxt(config['train']['pos'])
+ftr = None#open(config['train']['data'], "r")
 trlab = np.array([line.strip() for line in 
                   open(config['train']['labels'],'r')])
 
 # validation
-fposval = np.loadtxt(config['val']['pos']).astype(int)
-val_point = open(config['val']['data'], "r")
+fposval = None#np.loadtxt(config['val']['pos']).astype(int)
+val_point = None#open(config['val']['data'], "r")
 vallab = np.array([line.strip() for line in 
                   open(config['val']['labels'],'r')])
 
 # testing
-fposte = np.loadtxt(config['test']['pos']).astype(int)
-test_point = open(config['test']['data'], "r")
+fposte = None#np.loadtxt(config['test']['pos']).astype(int)
+test_point = None#open(config['test']['data'], "r")
 telab = np.array([line.strip() for line in 
                   open(config['test']['labels'],'r')])
 
 # find long sequence for mirrorplot
 Lens = []
-for pos in fposte:
-    test_point.seek(pos) 
-    Lens.append(len(test_point.readline().split()[1].split('|')[0]))
-MPIND = np.argmax(Lens)
+#for pos in fposte:
+#    test_point.seek(pos) 
+#    Lens.append(len(test_point.readline().split()[1].split('|')[0]))
+MPIND = 1000
 
 ###############################################################################
 ################################## Model ######################################
@@ -128,6 +139,7 @@ def LossFunc(targ, pred, root=config['root_int']):
 
 def train_step(samples, targ):
     
+    samples = [samples] if type(samples) != list else samples
     samplesgpu = [m.to(device) for m in samples]
     targgpu = targ.to(device)
     model.to(device)
@@ -150,13 +162,13 @@ def Testing(labels, pos, pointer, batch_size):
         model.to(device)
         Loss = 0
         arr = torch.zeros(config['model_config']['blocks'], arrdims)
-        for m in range(steps):
-            begin = m*batch_size
-            end = (m+1)*batch_size
+        for m, batch in enumerate(L.dataloader['val']):
+            
             # Test set
-            targ,_ = L.target(pos[begin:end], fp=pointer, return_mz=False)
-            samplesgpu = [n.to(device) for n in 
-                          L.input_from_str(labels[begin:end])[0]
+            samples, targ = batch
+            samples = [samples] if type(samples) != list else samples
+            samplesgpu = [
+                n.to(device) for n in samples
             ]
             out,out2,FMs = model(samplesgpu)
             loss = LossFunc(targ.to(device), out)
@@ -185,7 +197,7 @@ def train(epochs,
     # Testing before training begins
     test_loss, _ = 0,0#Testing(telab, fposte, test_point, batch_size)
     val_loss, varr = Testing(vallab, fposval, val_point, batch_size)
-    mirrorplot(MPIND)
+    #mirrorplot(MPIND)
     if svwts: 
         torch.save(model.state_dict(), 'saved_models/ckpt_step%d_%.4f'%(
                              model.global_step, -val_loss)
@@ -195,32 +207,38 @@ def train(epochs,
     # Training loop
     for i in range(epochs):
         start_epoch = time()
-        P = np.random.permutation(tot)
+        L.dataset['train'].set_epoch(i)
         if i>=lr_decay_start:
             opt.param_groups[0]['lr'] *= lr_decay_rate
         
         # trainintime=[]
         runav = torch.zeros((50,))
+        runstep = np.zeros((50,))
+        runload = np.zeros((50,))
         train_loss = torch.tensor(0., device=device)
         # Train an epoch
-        for j in range(steps):
+        start_step = time();start_load = time()
+        for j, batch in enumerate(L.dataloader['train']):
+            end_step = time()
+            total_step = end_step - start_step
+            total_load = end_step - start_load
             start_step = time()
+            runstep[j%50] = total_step
+            runload[j%50] = total_load
             
-            begin = j*batch_size
-            end = (j+1)*batch_size
-            
-            # samples = intorch[P[begin:end]]
-            samples,info = L.input_from_str(trlab[P[begin:end]])
-            targ,_ = L.target(fpostr[P[begin:end]], fp=ftr, return_mz=False)
+            samples, targ = batch
             Loss = train_step(samples, targ)
             model.global_step += 1
             train_loss += Loss
             
             runav[j%50] = Loss
             # trainintime.append(runav[-1])
-            if j%50==0: sys.stdout.write("\r\033[KStep %d/%d; Loss: %.3f (%.2f s)"%(
-                    j+1, steps, runav.mean(), time()-start_step)
-            )
+            if j%10==0: 
+                sys.stdout.write("\r\033[KStep %d/%d; Loss: %.3f (%.3f, %.5f s)"%(
+                    j+1, steps, runav.mean(), runstep.mean(), runload.mean())
+                )
+            
+            start_load = time()
         
         # Testing after training epoch
         train_loss = train_loss.detach().to('cpu').numpy() / steps
@@ -326,10 +344,11 @@ def mirrorplot(iloc=0, epoch=0, maxnorm=True, save=True):
         fig.savefig("./saved_models/mirroplot%d_%d.jpg"%(iloc,epoch))
         plt.close()
 
-train(
-      config['epochs'], 
-      batch_size=config['batch_size'], 
-      lr_decay_start=config['lr_decay_start'], 
-      lr_decay_rate=config['lr_decay_rate'], 
-      svwts=config['svwts']
-)
+if __name__ == "__main__":
+    train(
+        config['epochs'], 
+        batch_size=config['batch_size'], 
+        lr_decay_start=config['lr_decay_start'], 
+        lr_decay_rate=config['lr_decay_rate'], 
+        svwts=config['svwts']
+    )

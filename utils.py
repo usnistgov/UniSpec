@@ -119,7 +119,7 @@ class DicObj:
         if os.path.exists(mod_path):
             self.mdic = {
                 b:a+len(self.dic) 
-                for a,b in enumerate(['']+open(mod_path).read().split("\n"))
+                for a,b in enumerate([m.split()[0] for m in open(mod_path).read().split("\n") if len(m.split())>0])
             }
         else:
             self.mdic = {b:a+len(self.dic) for a,b in enumerate([
@@ -350,56 +350,58 @@ class DicObj:
 
 class LoadObj:
     def __init__(self,
-        dataset_path: dict,
         #dictionary_path: str,
         dobj: DicObj,
+        dataset_path: dict=None,
         batch_size: int=100,
         embed: bool=False,
         num_workers: int=0,
+        **kwargs
     ):
         self.D = dobj
         self.embed = embed
         self.channels = dobj.seq_channels if embed else dobj.channels
         
         # Dataset
-        dataset = load_dataset(
-            'parquet',
-            data_files=dataset_path,
-            streaming=True
-        )
-        
-        # Filter for length
-        dataset = dataset.filter(
-            self.filter_charge_and_length
-        )
-        
-        # Map to format outputs
-        dataset = dataset.map(
-            self.map_fn,
-            remove_columns=['sequence', 'charge', 'mod_pos', 'mod_type', 'nce', 'ev', 'mz', 'ab']
-        )
-        
-        # Shuffle dataset
-        dataset['train'] = dataset['train'].shuffle(buffer_size=10000)
-        
-        self.dataset = dataset
-        
-        def build_dataloader(dataset, batch_size, num_workers):
-            return DataLoader(
-                dataset,
-                batch_size=batch_size,
-                num_workers=num_workers,
-                collate_fn=self.collate_fn,
-                persistent_workers=True,
+        if dataset_path is not None:
+            dataset = load_dataset(
+                'parquet',
+                data_files=dataset_path,
+                streaming=True
             )
-        
-        # Dataloaders
-        num_workers = min(self.dataset['train'].n_shards, num_workers)
-        self.dataloader = {
-            'train': build_dataloader(dataset['train'], batch_size, num_workers),
-            #'val':   self.build_dataloader(dataset['val']  , batch_size, 0),
-            #'test':  self.build_dataloader(dataset['test'] , batch_size, 0),
-        }
+            
+            # Filter for length
+            dataset = dataset.filter(
+                self.filter_charge_and_length
+            )
+            
+            # Map to format outputs
+            dataset = dataset.map(
+                self.map_fn,
+                remove_columns=['sequence', 'charge', 'mod_pos', 'mod_type', 'nce', 'ev', 'ion', 'ab']
+            )
+            
+            # Shuffle dataset
+            dataset['train'] = dataset['train'].shuffle(buffer_size=1000)
+            
+            self.dataset = dataset
+            
+            def build_dataloader(dataset, batch_size, num_workers):
+                return DataLoader(
+                    dataset,
+                    batch_size=batch_size,
+                    num_workers=num_workers,
+                    collate_fn=self.collate_fn,
+                    #persistent_workers=True,
+                )
+            
+            # Dataloaders
+            num_workers = min(self.dataset['train'].n_shards, num_workers)
+            self.dataloader = {
+                'train': build_dataloader(dataset['train'], batch_size, num_workers),
+                'val':   build_dataloader(dataset['val']  , batch_size, 0),
+                'test':  build_dataloader(dataset['test'] , batch_size, 0),
+            }
     
     """
     Windows multiprocessing prevents using lambda functions for map and filter
@@ -416,7 +418,12 @@ class LoadObj:
             (len(example['sequence']) <= self.D.seq_len)
         )
         return boolean
-        
+    
+    """
+    Saving large sparse arrays to parquet file is very slow to 
+    read in (e.g. target vector). Rather one should save the data 
+    in the most dense form possible and process it after being read in.
+    """
     def map_fn(self, example):
         input_tensor = torch.zeros((self.channels, self.D.seq_len), dtype=torch.float32)
         # Sequence
@@ -436,8 +443,13 @@ class LoadObj:
         # eV
         input_tensor[-1, :] = example['ev'] / 100.
         
+        output_tensor = torch.zeros((len(self.D.dictionary),), dtype=torch.float32)
+        for ion, ab in zip(example['ion'], example['ab']):
+            output_tensor[self.D.dictionary[ion]] = ab
+        output_tensor /= output_tensor.max()
+        
         example['input_tensor'] = input_tensor
-        example['target_tensor'] = torch.tensor(example['ab'], dtype=torch.float32)
+        example['target_tensor'] = output_tensor
         
         return example
 
@@ -1789,8 +1801,10 @@ class EvalObj(LoadObj):
             fig.savefig("./mirroplot.jpg")
             plt.close()
 
-if __name__ == "__main__":
+print("Utils script")
 
+if __name__ == "__main__":
+    print("main process")
     import yaml
 
     with open("./input_data/configuration/Train.yaml", 'r') as stream:
@@ -1815,18 +1829,19 @@ if __name__ == "__main__":
         }
 
     L = LoadObj(
-        {'train': "input_data/datasets/*train*"},
+        dataset_path={'train': "input_data/datasets/*train*", 'val': "input_data/datasets/*val*", 'test': "input_data/datasets/*test*"},
         dobj=D, 
         embed=False,#model_config['CEembed'],
         batch_size=100,
-        num_workers=4,
+        num_workers=8,
+        remove_columns=['ab','ion','ev','nce','charge','sequence'],
     )
 
     #A = next(iter(L.dataset['train']))
     #print(A)
 
     from time import time
-    breakpt = 100
+    breakpt = 500
     Start = time()
     for i, batch in enumerate(L.dataloader['train']):
         print("\r%d"%i, end='')
