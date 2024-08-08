@@ -1801,8 +1801,6 @@ class EvalObj(LoadObj):
             fig.savefig("./mirroplot.jpg")
             plt.close()
 
-print("Utils script")
-
 if __name__ == "__main__":
     print("main process")
     import yaml
