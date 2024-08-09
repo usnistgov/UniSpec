@@ -1,0 +1,14 @@
+dataset_path:
+    train: input_data/datasets/*train*parquet
+    val: input_data/datasets/*val*parquet
+    test: input_data/datasets/*test*parquet
+batch_size: 100
+num_workers: 2
+buffer_size: 1000
+remove_columns:
+    - ab
+    - ion
+    - ev
+    - nce
+    - charge
+    - sequence

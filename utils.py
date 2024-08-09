@@ -15,6 +15,28 @@ from tqdm import tqdm
 import pandas as pd
 from datasets import load_dataset
 from torch.utils.data import DataLoader
+from time import time
+import sys
+
+def root_intensity(ints, root=2):
+    """
+    Take the root of an intensity vector
+
+    Parameters
+    ----------
+    ints : intensity vector
+    root : root value
+
+    Returns
+    -------
+    ints : return transformed intensity vector
+
+    """
+    if root==2:
+        ints[ints>0] = torch.sqrt(ints[ints>0]) # faster than **(1/2)
+    else:
+        ints[ints>0] = ints[ints>0]**(1/root)
+    return ints
 
 def NCE2eV(nce, mz, charge, instrument='lumos'):
     """
@@ -356,6 +378,7 @@ class LoadObj:
         batch_size: int=100,
         embed: bool=False,
         num_workers: int=0,
+        buffer_size: int=1000,
         **kwargs
     ):
         self.D = dobj
@@ -382,7 +405,7 @@ class LoadObj:
             )
             
             # Shuffle dataset
-            dataset['train'] = dataset['train'].shuffle(buffer_size=1000)
+            dataset['train'] = dataset['train'].shuffle(buffer_size=buffer_size)
             
             self.dataset = dataset
             
@@ -523,10 +546,7 @@ class LoadObj:
         
         # Sequence
         assert len(seq) <= self.D.seq_len, "Exceeded maximum peptide length."
-        output[:len(self.D.dic),:len(seq)] = torch.nn.functional.one_hot(
-            torch.tensor([self.D.dic[o] for o in seq], dtype=torch.long),
-            len(self.D.dic)
-        ).T
+        output[:len(self.D.dic), :len(seq)] = self.sequence_one_hot(seq)
         output[len(self.D.dic)-1, len(seq):] = 1.
         # PTMs
         Mstart = mod.find('(') if mod!='0' else 1
@@ -546,48 +566,6 @@ class LoadObj:
             output[-1, :] = float(ev)/100. # ce
             out = [output]
         return out
-    
-    def input_from_file(self, fstarts, fn):
-        """
-        Create batch of model inputs from array of file starting positions and
-        the filename.
-        - If self.embed=True, then this function outputs charge and energy as 
-        batch-size length arrays containing the their respective values for 
-        each input. Otherwise the first output is just a single embedding tensor.
-        
-        :param fstarts: array of file postions for spectral labels to be loaded.
-        :param fn: filename to be opened
-        
-        :return out: List of inputs to the model. Length is 3 if
-                     self.embed=True, else length is 1.
-        :return info: List of tuples of peptide data. Each tuple is ordered as
-                      (seq,mod,charge,ev,nce).
-        """
-        if type(fstarts)==int: fstarts = [fstarts]
-
-        bs = len(fstarts)
-        outseq = torch.zeros((bs, self.channels, self.D.seq_len),
-                             dtype=torch.float32)
-        if self.embed:
-            outch = torch.zeros((bs,), dtype=torch.float32)
-            outce = torch.zeros((bs,), dtype=torch.float32)
-
-        info = []
-        with open(fn,'r') as fp:
-            for m in range(len(fstarts)):
-                fp.seek(fstarts[m])
-                line = fp.readline()
-                [seq,mod,charge,ev,nmpks] = line.split()[1].split("|")
-                charge = int(charge)
-                ev = float(ev[:-2])
-                info.append((seq,mod,charge,ev,0)) # dummy 0 for nce
-                out = self.inptsr(info[-1])
-                outseq[m] = out[0]
-                if self.embed:
-                    outch[m] = out[1]
-                    outce[m] = out[2]
-        out = [outseq, outch, outce] if self.embed else [outseq]
-        return out, info
     
     def input_from_str(self, strings):
         """
@@ -660,26 +638,6 @@ class LoadObj:
                 target[i,int(I)] = float(intensity)
                 if return_mz: moverz[i,int(I)] = float(mz)
         return target, moverz
-    
-    def root_intensity(self, ints, root=2):
-        """
-        Take the root of an intensity vector
-
-        Parameters
-        ----------
-        ints : intensity vector
-        root : root value
-
-        Returns
-        -------
-        ints : return transformed intensity vector
-
-        """
-        if root==2:
-            ints[ints>0] = torch.sqrt(ints[ints>0]) # faster than **(1/2)
-        else:
-            ints[ints>0] = ints[ints>0]**(1/root)
-        return ints
 
     def add_ce(self, label, ceadd=0, typ='ev'):
         """
@@ -1800,6 +1758,193 @@ class EvalObj(LoadObj):
         if save:
             fig.savefig("./mirroplot.jpg")
             plt.close()
+
+CS = torch.nn.CosineSimilarity(dim=-1)
+class Trainer:
+    def __init__(
+        self,
+        loader,
+        model,
+        opt,
+        config,
+        device,
+        labels_dict,
+    ):
+        self.loader = loader
+        self.model = model
+        self.opt = opt
+        self.config = config
+        self.device = device
+        self.labels = labels_dict
+    
+    def LossFunc(self, targ, pred, root=2):
+        targ = root_intensity(targ, root=root) if root is not None else targ
+        pred = root_intensity(pred, root=root) if root is not None else pred
+        cs = CS(targ, pred)
+        return -cs
+    
+    def train_step(self, samples, targ):
+        
+        samples = [samples] if type(samples) != list else samples
+        samplesgpu = [m.to(self.device) for m in samples]
+        targgpu = targ.to(self.device)
+        self.model.to(self.device)
+        
+        self.model.train()
+        self.model.zero_grad()
+        out,_,_ = self.model(samplesgpu, test=False)
+        
+        loss = self.LossFunc(targgpu, out, root=self.config['root_int'])
+        loss = loss.mean()
+        loss.backward()
+        self.opt.step()
+        return loss
+
+    def Testing(self, dataset='val'):
+        with torch.no_grad():
+            self.model.eval()
+            tot = len(self.labels[dataset])
+            #steps = (tot//batch_size) if tot%batch_size==0 else (tot//batch_size)+1
+            self.model.to(self.device)
+            Loss = 0
+            #arr = torch.zeros(config['model_config']['blocks'], arrdims)
+            for m, batch in enumerate(self.loader.dataloader[dataset]):
+                
+                # Test set
+                samples, targ = batch
+                samples = [samples] if type(samples) != list else samples
+                samplesgpu = [
+                    n.to(self.device) for n in samples
+                ]
+                out,out2,FMs = self.model(samplesgpu)
+                loss = self.LossFunc(targ.to(out.device), out)
+                Loss += loss.sum()
+                #arr += torch.tensor([[n for n in m] for m in out2])
+        #self.model.to('cpu')
+        Loss = (Loss/tot).to('cpu').detach().numpy()
+        return Loss, 0#arr.detach().numpy() / m
+    
+    def train(
+        self,
+        epochs,
+        batch_size=100,
+        lr_decay_start = 1e10,
+        lr_decay_rate = 0.9,
+        shuffle=True, 
+        svwts=False,
+        **kwargs
+    ):
+        #(config, trlab, telab, vallab, model, L, arrdims, opt) = kwargs['package']
+        print("Starting training for %d epochs"%epochs)
+        tot = len(self.labels['train'])
+        steps = np.minimum(
+            self.config['steps'] if self.config['steps'] is not None else 1e10,
+            tot//batch_size if tot%batch_size==0 else tot//batch_size + 1
+        )
+        
+        # Testing before training begins
+        test_loss, _ = 0,0#Testing(telab, fposte, test_point, batch_size)
+        val_loss, varr = self.Testing('val')
+        #mirrorplot(MPIND)
+        if svwts: 
+            torch.save(
+                self.model.state_dict(), 
+                'saved_models/ckpt_step%d_%.4f'%(self.model.global_step, -val_loss)
+            )
+        print("Val/Test: %6.3f / %6.3f"%(-val_loss, -test_loss))
+        
+        # Training loop
+        for i in range(epochs):
+            start_epoch = time()
+            self.loader.dataset['train'].set_epoch(i)
+            if i>=lr_decay_start:
+                self.opt.param_groups[0]['lr'] *= lr_decay_rate
+            
+            # trainintime=[]
+            runav = torch.zeros((50,))
+            runstep = np.zeros((50,))
+            runload = np.zeros((50,))
+            train_loss = torch.tensor(0., device=self.device)
+            # Train an epoch
+            start_step = time();start_load = time()
+            for j, batch in enumerate(self.loader.dataloader['train']):
+                
+                samples, targ = batch
+                total_step = time() - start_step
+                total_load = time() - start_load
+                start_step = time()
+                runstep[j%50] = total_step
+                runload[j%50] = total_load
+                
+                Loss = self.train_step(samples, targ)
+                self.model.global_step += 1
+                train_loss += Loss
+                
+                runav[j%50] = Loss
+                # trainintime.append(runav[-1])
+                if j%10==0: 
+                    sys.stdout.write("\r\033[KStep %d/%d; Loss: %.3f (%.3f, %.5f s)"%(
+                        j+1, steps, runav.mean(), runstep.mean(), runload.mean())
+                    )
+                
+                if self.config['steps'] is not None:
+                    if j == self.config['steps']:
+                        break
+                
+                start_load = time()
+            
+            # Testing after training epoch
+            train_loss = train_loss.detach().to('cpu').numpy() / steps
+            sys.stdout.write("\rTesting...%50s"%(""))
+            test_loss, _ = 0,0#Testing(telab, fposte, test_point, batch_size)
+            val_loss, varr = self.Testing('val')
+            #testintime.append(float(test_loss))
+            #validintime.append(float(val_loss))
+            
+            # Saving progress to file after training epoch
+            # with open("./saved_models/lossintime.txt", "a") as f:
+            #     f.write(" ".join([str(q) for q in trainintime]))
+            #     f.write(" ")
+            #with open('./saved_models/actarr.txt','a') as f:
+            #    f.write("".join(['%9d'%m for m in np.arange(arrdims)])+'\n')
+            #    for m in range(config['model_config']['blocks']): 
+            #        f.write("".join(['%9.5f'%a for a in varr[m]])+'\n')    
+            #mirrorplot(MPIND, epoch=i, maxnorm=True)
+            
+            # Save checkpoint
+            if svwts=='top':
+                currbest = np.maximum(np.max([float(m.split('_')[-1]) 
+                                      for m in os.listdir('./saved_models/') 
+                                      if m.split('_')[0]=='ckpt']), 0
+                )
+                if -val_loss > currbest:
+                    for file in os.listdir('./saved_models/'):
+                        if file.split('_')[0]=='ckpt': 
+                            os.remove('./saved_models/%s'%file)
+                    torch.save(
+                        self.model.state_dict(), 
+                        "saved_models/ckpt_step%d_%.4f"%(
+                            self.model.global_step, -val_loss
+                        )
+                    )
+            elif (svwts=='all') | (svwts=='True'):
+                torch.save(
+                    self.model.state_dict(), 
+                    "saved_models/ckpt_step%d_%.4f"%(
+                        model.global_step,-val_loss
+                    )
+                )
+            torch.save(self.opt.state_dict(), "saved_models/opt.sd")
+            
+            string = (
+      "Epoch %d; Train loss: %.3f; Val loss: %6.3f; Test loss: %6.3f; %.1f s"%(
+                      i, train_loss, -val_loss, -test_loss, time()-start_epoch)
+            )
+            # Print out results
+            with open("./saved_models/losses.txt", 'a') as f:
+                f.write(string+"\n")
+            sys.stdout.write("\r"+string+"\n")
+        model.to("cpu")    
 
 if __name__ == "__main__":
     print("main process")

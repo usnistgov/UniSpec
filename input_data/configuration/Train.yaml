@@ -31,8 +31,8 @@ model_config:
 root_int: 2
 lr: 3e-4
 epochs: 33
-steps: 10000
+steps:
 batch_size: 100
 lr_decay_start: 20
 lr_decay_rate: 0.85
-svwts: all
+svwts: False
