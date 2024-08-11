@@ -414,8 +414,7 @@ class LoadObj:
                     dataset,
                     batch_size=batch_size,
                     num_workers=num_workers,
-                    collate_fn=self.collate_fn,
-                    #persistent_workers=True,
+                    collate_fn=self.collate_fn,   
                 )
             
             # Dataloaders
@@ -1856,6 +1855,18 @@ class Trainer:
         # Training loop
         for i in range(epochs):
             start_epoch = time()
+            
+            ### Temporary Workaround ###
+            import yaml
+            with open('./input_data/configuration/dataset.yaml', 'r') as stream:
+                dset_config = yaml.safe_load(stream)
+            self.loader = LoadObj(
+                dobj=self.loader.D, 
+                embed=False,#model_config['CEembed'],
+                **dset_config,
+            )
+            ### Get rid of later ###
+            
             self.loader.dataset['train'].set_epoch(i)
             if i>=lr_decay_start:
                 self.opt.param_groups[0]['lr'] *= lr_decay_rate
@@ -1972,7 +1983,7 @@ if __name__ == "__main__":
         }
 
     L = LoadObj(
-        dataset_path={'train': "input_data/datasets/*train*", 'val': "input_data/datasets/*val*", 'test': "input_data/datasets/*test*"},
+        dataset_path={'train': "input_data/datasets/*train*parquet", 'val': "input_data/datasets/*val*parquet", 'test': "input_data/datasets/*test*parquet"},
         dobj=D, 
         embed=False,#model_config['CEembed'],
         batch_size=100,
@@ -1986,15 +1997,25 @@ if __name__ == "__main__":
     from time import time
     breakpt = 500
     Start = time()
-    for i, batch in enumerate(L.dataloader['train']):
+    for i, batch in enumerate(L.dataloader['val']):
         print("\r%d"%i, end='')
         if i==0:
             start = time()
             delay = start - Start
-        if i == breakpt:
-            break
+        """if i == breakpt:
+            break"""
     end = time()
     time_per_sample = (breakpt*100) / (end-start)
     print()
+    L = LoadObj(
+        dataset_path={'train': "input_data/datasets/*train*parquet", 'val': "input_data/datasets/*val*parquet", 'test': "input_data/datasets/*test*parquet"},
+        dobj=D, 
+        embed=False,#model_config['CEembed'],
+        batch_size=100,
+        num_workers=8,
+        remove_columns=['ab','ion','ev','nce','charge','sequence'],
+    )
+    for i, batch in enumerate(L.dataloader['val']):
+        print("\r%d"%i, end='')
     print(f"{delay} second delay")
     print(time_per_sample, "samples per second")
