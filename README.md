@@ -11,9 +11,7 @@ The predict.yaml file paths are preset for this model.
 
 ## Contact Us ##
 
-If you have any inquiries regarding the repository, please don't hesitate to reach out to the NIST UniSpec team. You can contact them directly at qian.dong@nist.gov, joellapin@comcast.net, and xinjian.yan@nist.gov. Alternatively, you can also post an issue in the repository itself.
-
-The UniSpec team consists of associates and members of the Mass Spectrometry Data Center, Biomolecular Measurement Division of the Material Measurement Laboratory.
+If you have any inquiries regarding the repository, please don't hesitate to reach out to the UniSpec team. You can contact us directly at qiand3161@gmail.com, xinjian.yan@nist.gov, and joellapin@comcast.net, Alternatively, you can also post an issue in the repository itself.
 
 Installation
 -
@@ -21,7 +19,7 @@ Installation
 
 Raw data
 --------
-In order to turn raw mass spectral data from .msp files into streamlined datasets for model training, you must use
+In order to turn raw mass spectral data from NIST MSP files into streamlined datasets for model training, you must use
 the python script create_dataset_aidata.py in the scripts/ directory. The settings for this script are set in the
 yaml files scripts/input_options/create_dataset.yaml and scripts/input_options/combo.yaml. Directions for using
 the script create_dataset.py are in the comments at the top of that script.
