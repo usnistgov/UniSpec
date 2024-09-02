@@ -30,7 +30,7 @@ model_config:
 
 root_int: 2
 lr: 3e-4
-epochs: 33
+epochs: 20
 steps: 10000
 batch_size: 100
 lr_decay_start: 20
