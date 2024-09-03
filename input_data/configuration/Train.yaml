@@ -1,3 +1,8 @@
+# 1. This yaml file was based on the specific computer configuration UniSpec was trained, 
+#    and may need to be adjusted for your real condition.
+# 2. The following input files can be ontained from the UniSpec Zenoda download 
+#	folder "Streamlined_inputdatasets.zip", see "Readme_Streamlined_inputdatasets.txt".
+
 train:
    labels: ./input_data/labels/train_labels.txt
    pos: ./input_data/txt_pos/fpostrain.txt
