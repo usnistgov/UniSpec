@@ -9,6 +9,10 @@ The code allows for the reconstruction of the entire project, from raw data to t
 Alternatively, you can use the trained model weights that are included in this repository (saved_models/unispec23).
 The predict.yaml file paths are preset for this model.
 
+UPDATE 10/6/2024
+Remote prediction platform service Koina now hosts a version of Unispec that outputs the top 200 predicted peaks by intensity. Please visit https://koina.wilhelmlab.org/ for
+usage instructions.
+
 ## Contact Us ##
 
 If you have any inquiries regarding the repository, please don't hesitate to reach out to the UniSpec team. You can contact us directly at qiand3161@gmail.com, xinjian.yan@nist.gov, and joellapin@comcast.net, Alternatively, you can also post an issue in the repository itself.
