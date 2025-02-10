@@ -2,7 +2,8 @@
 """
 Created on Mon Sep 26 08:18:11 2022
 @author: jsl6
-Modified NCE2eV on Wed Nov 9th 2023
+Modified NCE2eV on Mon Jan 10th 2025
+Added an adjustment for QE Eq: correction = +5.7 and Corrected a typo for Elite Eq: nce * mz / 500 * CF
 @author: qd
 """
 import re
@@ -26,9 +27,10 @@ def NCE2eV(nce, mz, charge, instrument='lumos'):
         elif charge==5: cf=0.75
         else: RuntimeError('Charge not supported')
     if instrument.lower()==('q_exactive' or 'q_exactive_hfx'):
-        ev = nce*mz/500*cf
+        correction = +5.7
+        ev = nce*mz/500*cf + correction
     elif instrument.lower()=='elite':
-        ev = nce*mz*500*cf
+        ev = nce*mz/500*cf
     elif instrument.lower()=='velos':
         if charge==2:
             ev = (0.0015*nce-0.0004)*mz
